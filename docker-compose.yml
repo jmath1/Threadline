@@ -6,16 +6,13 @@ services:
     container_name: postgres_db
     restart: always
     environment:
-      POSTGRES_DB: project1      # Replace 'mydatabase' with your desired database name
-      POSTGRES_USER: myuser        # Replace 'myuser' with your desired username
-      POSTGRES_PASSWORD: mypassword  # Replace 'mypassword' with your desired password
+      POSTGRES_DB: project1
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
       PGADMIN_USER: admin
       PGADMIN_PASSWORD: admin
     ports:
-      - "5432:5432"                # Expose PostgreSQL default port for external access
+      - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:                    # Define a named volume for persisting PostgreSQL data
+      - ${PWD}/docker/volumes:/var/lib/postgresql/data
 
