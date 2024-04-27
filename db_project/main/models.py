@@ -3,6 +3,8 @@ from django.db import models
 # Create your models here.
 from django.contrib.gis.db import models as gis_models
 from main.qs_managers import *
+from main.utils import run_query
+
 
 class Hood(models.Model):
     hood_id = models.IntegerField(primary_key=True)
@@ -49,6 +51,26 @@ class Profile(models.Model):
     @property
     def is_authenticated(self):
         return True
+    
+    def get_profile_hood_and_block(self):
+        sql_query = f"""
+            SELECT b.name AS block_name, b.hood_id
+            FROM Profile p
+            JOIN Block b ON ST_DWithin(p.coords::geography, b.coords::geography, b.radius)
+            WHERE p.user_id = {self.user_id};
+        """
+        return run_query(sql_query)
+
+    def confirm_location(self, block_id):
+        confirmed = False
+        if self.get_member_count(block_id) <= 3:
+            confirmed = True
+        else:
+            # count profile block approvals for block_id and profile_id
+            if ProfileBlockApproval.objects.count(block_id, self.user_id) >= 3:
+                confirmed = True
+        self.location_confirmed = confirmed
+        self.save()
 
     class Meta:
         managed = False
