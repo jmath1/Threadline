@@ -1,11 +1,14 @@
 from django.db import models
 
 # Create your models here.
-from django.contrib.gis.db import models
+from django.contrib.gis.db import models as gis_models
+from main.qs_managers import *
 
 class Hood(models.Model):
     hood_id = models.IntegerField(primary_key=True)
     name = models.CharField(max_length=50, unique=True)
+
+    objects = HoodManager()
 
     class Meta:
         managed = False
@@ -16,8 +19,10 @@ class Block(models.Model):
     hood = models.ForeignKey(Hood, on_delete=models.CASCADE)
     description = models.TextField()
     name = models.CharField(max_length=100, unique=True)
-    coords = models.PointField(geography=True)
+    coords = gis_models.PointField(geography=True)
     radius = models.DecimalField(max_digits=10, decimal_places=6)
+    
+    objects = BlockManager()
 
     class Meta:
         managed = False
@@ -32,8 +37,18 @@ class Profile(models.Model):
     password = models.CharField(max_length=100)
     description = models.TextField()
     photo_url = models.CharField(max_length=255)
-    coords = models.PointField(geography=True)
+    coords = gis_models.PointField(geography=True)
     location_confirmed = models.BooleanField()
+    
+    objects = ProfileManager()
+    
+    USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = ['email', 'password', 'first_name', 'last_name']
+    is_anonymous = False
+    
+    @property
+    def is_authenticated(self):
+        return True
 
     class Meta:
         managed = False
@@ -44,6 +59,7 @@ class ProfileBlockApproval(models.Model):
     user_id = models.IntegerField()
     approver_id = models.IntegerField()
 
+    objects = ProfileBlockApprovalManager()
     class Meta:
         managed = False
         db_table = 'ProfileBlockApproval'
@@ -52,6 +68,8 @@ class ProfileBlockApproval(models.Model):
 class UserFollowBlock(models.Model):
     block_id = models.IntegerField()
     user_id = models.IntegerField()
+    
+    objects = UserFollowBlockManager()
 
     class Meta:
         managed = False
@@ -61,6 +79,8 @@ class UserFollowBlock(models.Model):
 class UserFollowHood(models.Model):
     hood_id = models.IntegerField()
     user_id = models.IntegerField()
+    
+    objects = UserFollowHoodManager()
 
     class Meta:
         managed = False
@@ -71,6 +91,8 @@ class Friendship(models.Model):
     follower_id = models.IntegerField()
     followee_id = models.IntegerField()
     confirmed = models.BooleanField()
+    
+    objects = FriendshipManager()
 
     class Meta:
         managed = False
@@ -82,6 +104,8 @@ class Thread(models.Model):
     title = models.CharField(max_length=255)
     block_id = models.IntegerField(null=True)
     hood_id = models.IntegerField(null=True)
+    
+    objects = ThreadManager()
 
     class Meta:
         managed = False
@@ -90,6 +114,8 @@ class Thread(models.Model):
 class UserThread(models.Model):
     thread_id = models.IntegerField()
     user_id = models.IntegerField()
+    
+    objects = UserThreadManager()
 
     class Meta:
         managed = False
@@ -100,9 +126,11 @@ class Message(models.Model):
     message_id = models.IntegerField(primary_key=True)
     thread_id = models.IntegerField()
     user_id = models.IntegerField()
-    coords = models.PointField(geography=True)
+    coords = gis_models.PointField(geography=True)
     body = models.TextField()
     datetime = models.DateTimeField(default=models.functions.Now())
+    
+    objects = MessageManager()
 
     class Meta:
         managed = False
@@ -112,6 +140,8 @@ class UserAccess(models.Model):
     user_id = models.IntegerField()
     thread_id = models.IntegerField(null=True)
     datetime = models.DateTimeField(default=models.functions.Now())
+    
+    objects = UserAccessManager()
 
     class Meta:
         managed = False
@@ -125,6 +155,8 @@ class Notifications(models.Model):
     thread_id = models.IntegerField(null=True)
     message_id = models.IntegerField(null=True)
     datetime = models.DateTimeField(default=models.functions.Now())
+    
+    objects = NotificationsManager()
 
     class Meta:
         managed = False

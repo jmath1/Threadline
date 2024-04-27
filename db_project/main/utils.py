@@ -1,8 +1,8 @@
 import psycopg2
 from psycopg2 import Error
-from django.conf.settings import DATABASES
+from django.conf import settings
 
-connection = psycopg2.connect(**DATABASES["default"])
+connection = psycopg2.connect(**settings.PSYCOPG2_CONN)
 
 cursor = connection.cursor()
 
