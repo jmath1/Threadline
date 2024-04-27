@@ -29,7 +29,10 @@ ALLOWED_HOSTS = []
 
 
 AUTH_USER_MODEL = 'main.Profile'
-# Application definition
+
+AUTHENTICATION_BACKENDS = [
+    'main.auth.CustomSQLAuthBackend'
+]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -85,6 +88,15 @@ DATABASES = {
         'HOST': 'localhost',      # If PostgreSQL is running locally
         'PORT': '5432',           # Default PostgreSQL port
     }
+}
+
+conn = DATABASES["default"]
+PSYCOPG2_CONN = {
+    "user": conn["USER"],
+    "password": conn["PASSWORD"],
+    "host": conn["HOST"],
+    "port": conn["PORT"],
+    "database": conn["NAME"]
 }
 
 
