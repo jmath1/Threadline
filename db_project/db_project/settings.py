@@ -28,6 +28,7 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
+AUTH_USER_MODEL = 'main.Profile'
 # Application definition
 
 INSTALLED_APPS = [
@@ -37,6 +38,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.gis",
     "main",
 ]
 
@@ -75,11 +77,16 @@ WSGI_APPLICATION = "db_project.wsgi.application"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'project1',       # Replace with your database name
+        'USER': 'myuser',         # Replace with your database username
+        'PASSWORD': 'mypassword', # Replace with your database password
+        'HOST': 'localhost',      # If PostgreSQL is running locally
+        'PORT': '5432',           # Default PostgreSQL port
     }
 }
+
 
 
 # Password validation
