@@ -14,5 +14,5 @@ def run_query(sql_query):
 
 def confirm_location(block_id):
     if Block.objects.get_member_count(block_id) <= 3:
-            return True
+        return True
     return False
