@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_DB: project1      # Replace 'mydatabase' with your desired database name
+      POSTGRES_USER: myuser        # Replace 'myuser' with your desired username
+      POSTGRES_PASSWORD: mypassword  # Replace 'mypassword' with your desired password
+      PGADMIN_USER: admin
+      PGADMIN_PASSWORD: admin
+    ports:
+      - "5432:5432"                # Expose PostgreSQL default port for external access
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:                    # Define a named volume for persisting PostgreSQL data
+
