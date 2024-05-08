@@ -1,9 +1,10 @@
+# Create your models here.
+from django.contrib.auth.models import AbstractBaseUser
+from django.contrib.gis.db import models as gis_models
 from django.db import models
 
-# Create your models here.
-from django.contrib.gis.db import models as gis_models
-from main.qs_managers import *
-from main.utils import run_query
+from main.managers import *
+from main.utils.utils import run_query
 
 
 class Hood(models.Model):
@@ -30,8 +31,8 @@ class Block(models.Model):
         managed = False
         db_table = 'Block'
 
-class Profile(models.Model):
-    user_id = models.IntegerField(primary_key=True)
+class Profile(AbstractBaseUser):
+    user_id = models.IntegerField(primary_key=True,)
     username = models.CharField(max_length=50, unique=True)
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
@@ -43,11 +44,14 @@ class Profile(models.Model):
     location_confirmed = models.BooleanField()
     
     objects = ProfileManager()
-    
+
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['email', 'password', 'first_name', 'last_name']
     is_anonymous = False
-    
+    class Meta:
+        managed = False
+        db_table = 'profile'
+
     @property
     def is_authenticated(self):
         return True

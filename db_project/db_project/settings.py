@@ -9,8 +9,13 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+import logging
+import os
 from pathlib import Path
+
+import psycopg2
+
+logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,35 +30,48 @@ SECRET_KEY = "django-insecure-^a%1(5g9*c^k56jv(v8y5&fmzx83toi3p3u&qjw#$6x+r+z)^r
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["0.0.0.0"]
 
 
 AUTH_USER_MODEL = 'main.Profile'
 
 AUTHENTICATION_BACKENDS = [
-    'main.auth.CustomSQLAuthBackend'
+    'main.auth.CustomSQLAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
+
 INSTALLED_APPS = [
-    "django.contrib.admin",
+   # "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.gis",
+    "corsheaders",
     "main",
+    "crispy_forms",
+    "crispy_bootstrap4",
+    "rest_framework",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+]
+
 
 ROOT_URLCONF = "db_project.urls"
 
@@ -81,22 +99,23 @@ WSGI_APPLICATION = "db_project.wsgi.application"
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'project1',       # Replace with your database name
-        'USER': 'myuser',         # Replace with your database username
-        'PASSWORD': 'mypassword', # Replace with your database password
-        'HOST': 'localhost',      # If PostgreSQL is running locally
-        'PORT': '5432',           # Default PostgreSQL port
-    }
-}
-
-conn = DATABASES["default"]
-PSYCOPG2_CONN = {
-    "user": conn["USER"],
-    "password": conn["PASSWORD"],
-    "host": conn["HOST"],
-    "port": conn["PORT"],
-    "database": conn["NAME"]
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': 'project1',
+        'USER': 'myuser',
+        'PASSWORD': 'mypassword',
+        'HOST': '0.0.0.0',
+        'PORT': '5432',
+        'MIGRATE': True,    
+        'TEST': {
+            'ENGINE': 'django.contrib.gis.db.backends.postgis',
+            'NAME': 'test',
+            'ALIAS': 'test',
+            'USER': 'myuser',
+            'PASSWORD': 'mypassword',
+            'HOST': '0.0.0.0',
+            'PORT': '5432',
+            'MIGRATE': True
+        }}
 }
 
 
@@ -168,3 +187,11 @@ LOGGING = {
         },
     },
 }
+
+TEST_RUNNER = 'main.utils.test_runners.TestRunner'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': []
+}
+
+JWT_EXPIRATION_TIME = 600 # 10 minutes

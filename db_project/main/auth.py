@@ -1,26 +1,52 @@
-from django.conf import Settings
-from django.contrib.auth.backends import BaseBackend
-from main.models import Profile
+import time
 
-class CustomSQLAuthBackend(BaseBackend):
-    def authenticate(self, request, username=None, password=None):
-        login_valid = settings.ADMIN_LOGIN == username
-        pwd_valid = check_password(password, settings.ADMIN_PASSWORD)
-        if login_valid and pwd_valid:
-            try:
-                user = User.objects.get(username=username)
-            except User.DoesNotExist:
-                # Create a new user. There's no need to set a password
-                # because only the password from settings.py is checked.
-                user = User(username=username)
-                user.is_staff = True
-                user.is_superuser = True
-                user.save()
-            return user
-        return None
+import jwt
+from django.conf import settings
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.permissions import BasePermission
 
-    def get_user(self, user_id):
-        try:
-            return User.objects.get(pk=user_id)
-        except User.DoesNotExist:
+
+class JWTAuthentication(BasePermission):
+
+    def authenticate(self, request):
+        user = self.authenticate_header(request)
+        if not user:
+            raise AuthenticationFailed('Unauthenticated')
+        return user
+    
+    def authenticate_header(self, request):
+        token = request.COOKIES.get('jwt_token')
+
+        if not token:
             return None
+
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        except jwt.ExpiredSignatureError:
+            raise AuthenticationFailed('Token has expired')
+        except jwt.InvalidTokenError:
+            raise AuthenticationFailed('Invalid token')
+
+        user_id = payload.get('user_id')
+        exp = payload.get('exp')
+        if not user_id or not exp or not int(exp) > int(time.time()):
+            raise AuthenticationFailed('Invalid token')
+        return user_id
+
+    def refresh_token(self, user_id):
+        expiration_time = int(time.time()) + settings.JWT_EXPIRATION_TIME
+        payload = {'user_id': user_id, 'exp': expiration_time}
+        return jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+
+
+class LoginRequiredPermission(JWTAuthentication):
+    """
+    Custom permission class to require login for accessing the view.
+    """
+    def has_permission(self, request, view):
+        # Check if the user is authenticated
+        user_id = self.authenticate(request)
+        if user_id:
+            request.user = user_id
+            return True
+        return False

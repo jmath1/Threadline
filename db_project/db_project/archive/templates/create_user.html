@@ -1,0 +1,10 @@
+
+{% load crispy_forms_tags %}
+
+<form method="post">
+    {% csrf_token %}
+    {% crispy form %}
+    <button type="submit">Submit</button>
+</form>
+
+<a href="/create-user">Sign Up</a>

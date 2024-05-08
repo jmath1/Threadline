@@ -17,14 +17,17 @@ CREATE TABLE Block (
 );
 
 CREATE TABLE Profile (
-    user_id INT PRIMARY KEY,
+    user_id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE,
     first_name VARCHAR(50),
     last_name VARCHAR(50),
+    address VARCHAR(200),
     email VARCHAR(100) UNIQUE,
     password VARCHAR(100),
     description TEXT,
     photo_url VARCHAR(255),
+    block_id INT,
+    FOREIGN KEY (block_id) REFERENCES Block(block_id),
     coords GEOGRAPHY(POINT, 4326),
     location_confirmed BOOLEAN
 );
@@ -113,10 +116,3 @@ CREATE TABLE Notifications (
     FOREIGN KEY (thread_id) REFERENCES Thread(thread_id),
     FOREIGN KEY (message_id) REFERENCES Message(message_id)
 );
-
-
-
-
-
-
-
