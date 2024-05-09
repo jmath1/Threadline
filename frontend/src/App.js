@@ -11,7 +11,7 @@ import FriendsListPage from './pages/FriendsListPage';
 import NeighborsListPage from './pages/NeighborsListPage';
 import NavBar from './components/NavBar';
 import './styles/navbar.css';
-
+import './styles/table.css';
 
 function App() {
 

@@ -35,7 +35,7 @@ function EditProfileForm({ onSubmit }) {
         event.preventDefault();
         setError(''); // Reset the error message on new submission
         try {
-          await axios.post('http://0.0.0.0:8000/user/edit-profile/', formData);
+          await axios.post('http://0.0.0.0:8000/user/edit/', formData,  {headers: {"Authorization": `${localStorage.getItem('jwt_token')}`}});
           navigate('/'); // Redirect on successful registration
         } catch (error) {
           if (error.response) {
@@ -45,14 +45,13 @@ function EditProfileForm({ onSubmit }) {
           }
         }
     };
-
     return (
         <div>
             {error && <div style={{ color: 'red' }} role="alert">{error}</div>}
             <form onSubmit={handleSubmit} className="container mt-5">
                 <div className="form-group">
                     <label htmlFor="username">Username: </label>
-                    <input type="text" className="form-control" id="user_name" name="user_name" value={formData.user_name} onChange={handleChange} required />
+                    <input type="text" className="form-control" id="user_name" name="user_name" value={formData.username} onChange={handleChange} required />
                 </div>
                 <div className="form-group">
                     <label htmlFor="email">Email: </label>

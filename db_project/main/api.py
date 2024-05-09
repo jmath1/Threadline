@@ -14,15 +14,14 @@ from main.auth import JWTAuthentication
 from main.auth import LoginRequiredPermission
 from main.serializers import (EditProfileSerializer, LoginSerializer,
                               ProfileSerializer)
-from main.utils.utils import run_query, execute, query_to_json
+from main.utils.utils import run_query, execute, query_to_json, get_user_id
 
 
 def healthcheck(request):
     return HttpResponse("this is a test")
 
-def get_user_id(request):
-    payload = jwt.decode(request.headers.get("Authorization"), settings.SECRET_KEY, algorithms=['HS256'])
-    return payload.get('user_id')
+
+
 class CustomAPIView(APIView):
     pass
 
@@ -113,21 +112,25 @@ class EditProfileView(APIView):
                     parameters[field] = f"{value}', 4326)"
                     set_clauses.append(f"{field}=ST_PointFromText('POINT{value}', 4326)")
                 else:
-                    # Use the field name as a placeholder key
-                    placeholder = field
-                    parameters[placeholder] = value
-                    set_clauses.append(f"{field}=%({placeholder})s")
+                    if value != 'NULL':
+                        set_clauses.append("{field}='{value}'".format(
+                            field=field,
+                            value=value
+                        ))
+                    else:
+                        set_clauses.append("{field}={value}".format(
+                            field=field,
+                            value=value
+                        ))
 
         set_clause = ", ".join(set_clauses)
 
         sql_query = f"""
             UPDATE Profile 
             SET {set_clause}
-            WHERE user_id=%(user_id)s;
+            WHERE user_id={user_id};
         """
-        # Execute the SQL query, passing the 'parameters' dictionary which includes 'user_id'
-        parameters['user_id'] = user_id
-        result = execute(sql_query, parameters)  # Assuming 'execute' can handle param dicts
+        result = execute(sql_query)
 
         if result:
             return user_id
@@ -137,7 +140,7 @@ class EditProfileView(APIView):
     def post(self, request):
         serializer = EditProfileSerializer(data=request.data)
        
-        if serializer.is_valid():
+        if serializer.is_valid(request=request):
             self.save(request.user, **serializer.data)
             
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -156,8 +159,44 @@ class GetNeighborList(APIView):
         """
         return JsonResponse({"results": query_to_json(sql_query)})
 
-def get_followers(request):
+class CreateFriendshipRequest(APIView):
     
+    permission_classes = [LoginRequiredPermission]
+    def post(self, request):
+        user_id = get_user_id(request)
+        sql_query = f"""
+            INSERT INTO Friendship (follower_id, followee_id, confirmed)
+            VALUES ({user_id}, {request.data["followee_id"]}, false)
+            RETURNING;
+        """
+        execute(sql_query)
+        return JsonResponse(status_code=201)
+class GetFriendshipRequests(APIView):
+    permission_classes = [LoginRequiredPermission]
+    def get(self, request):
+        user_id = get_user_id(request)
+        sql_query = f"""
+            SELECT p.user_id, p.username, p.first_name, p.last_name, p.email
+            FROM Profile p
+            JOIN Friendship f ON p.user_id = f.follower_id
+            WHERE f.followee_id = {user_id} AND confirmed=false;
+        """
+        return JsonResponse({"results": query_to_json(sql_query)})
+    
+class ConfirmFriendshipRequest(APIView):
+    permission_classes = [LoginRequiredPermission]
+    def post(self, request):
+        user_id = get_user_id(request)
+        sql_query = f"""
+            UPDATE Friendship
+            SET confirmed=true
+            WHERE follower_id={request.data["follower_id"]} AND followee_id={user_id};
+        """
+        execute(sql_query)
+        return JsonResponse(status_code=201)
+
+
+def get_followers(request):
     sql_query = f"""
         SELECT p.user_id, p.username, p.first_name, p.last_name, p.email
         FROM Profile p

@@ -1,0 +1,28 @@
+/* neighbors.css - create a new CSS file and include it in your component */
+.neighbor-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: #f9f9f9;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.neighbor-table th,
+.neighbor-table td {
+    border: 1px solid #ccc;
+    padding: 12px 15px;
+    text-align: left;
+}
+
+.neighbor-table th {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.neighbor-table tbody tr:nth-child(odd) {
+    background-color: #ffffff;
+}
+
+.neighbor-table tbody tr:hover {
+    background-color: #f1f1f1;
+}

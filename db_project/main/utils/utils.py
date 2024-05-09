@@ -1,11 +1,11 @@
-import os
-import re
-from functools import wraps
-
-from psycopg2 import sql
 from django.conf import settings
 from django.db import connection
+import jwt
 
+
+def get_user_id(request):
+    payload = jwt.decode(request.headers.get("Authorization"), settings.SECRET_KEY, algorithms=['HS256'])
+    return payload.get('user_id')
 
 def execute(sql):
     cursor = connection.cursor()

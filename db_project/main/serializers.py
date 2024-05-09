@@ -2,7 +2,7 @@ import requests
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from main.utils.utils import run_query
+from main.utils.utils import run_query, get_user_id
 
 
 class ProfileSerializer(serializers.Serializer):
@@ -25,8 +25,9 @@ class ProfileSerializer(serializers.Serializer):
                         JOIN Block b ON p.block_id = b.block_id 
                         WHERE b.block_id = {block_id} 
                         GROUP BY b.block_id"""
+        
         data = run_query(sql_query)
-        if data[0][0] <= 3:
+        if data[0]["count"] <= 3:
             self.inital_data = True
             return True
         
@@ -44,7 +45,7 @@ class ProfileSerializer(serializers.Serializer):
 
         return instance
 
-    def is_valid(self, *, raise_exception=False):
+    def is_valid(self, request=None, raise_exception=False):
         """
         validates username and email
         """
@@ -56,10 +57,9 @@ class ProfileSerializer(serializers.Serializer):
         username = self.initial_data.get("username")
         email = self.initial_data.get("email")
         sql_query = f"""
-            SELECT COUNT(*) FROM Profile WHERE username='{username}' OR email='{email}';
+            SELECT COUNT(*) FROM Profile WHERE (username='{username}' OR email='{email}' ) AND user_id != {get_user_id(request)};
         """
-        
-        if run_query(sql_query)[0][0] > 0:
+        if run_query(sql_query)[0]["count"] > 0:
             raise ValidationError("Username or email already in use")
         
         return super().is_valid(raise_exception=raise_exception)
@@ -68,7 +68,7 @@ class ProfileSerializer(serializers.Serializer):
         """
         Checks to make sure address coords are within a supported block and hood. Returns (block_id, hood_id) if they exist
         """
-        sql_query = f"""SELECT block_id, hood_id FROM Block b WHERE ST_DWithin(
+        sql_query = f"""SELECT block_id FROM Block b WHERE ST_DWithin(
             b.coords,
             ST_GeomFromText('POINT({self.coords[0]} {self.coords[1]})', 4326),
             b.radius
@@ -77,7 +77,7 @@ class ProfileSerializer(serializers.Serializer):
         if not data:
             raise ValidationError("Block not supported")
         else:
-            return data[0]
+            return data[0]["block_id"], None
         
         
     def geocode_address(self, address):
