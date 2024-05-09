@@ -9,29 +9,43 @@ from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from main.auth import JWTAuthentication
 
 from main.auth import LoginRequiredPermission
 from main.serializers import (EditProfileSerializer, LoginSerializer,
                               ProfileSerializer)
-from main.utils.utils import run_query, sanitize, execute
+from main.utils.utils import run_query, execute
 
 
 def healthcheck(request):
     return HttpResponse("this is a test")
 
 class CustomAPIView(APIView):
-    def post(self, request):
-        
-        request.data = [re.sub(r'([^a-zA-Z0-9\s])', r'\\\1', input_data) for input_data in request.data]
-
+    pass
 
 class ProfileRegisterView(CustomAPIView):
 
-    def save(self, username, first_name, last_name, email, password, coords, block_id, address, confirmed, description='NULL', photo_url='NULL'):
-        sql_query = f"""INSERT INTO Profile (username, first_name, last_name, block_id, email, password, address, description, photo_url, coords, location_confirmed)
-                        VALUES ('{username}', '{first_name}', '{last_name}', '{block_id}','{email}', '{make_password(password)}', '{address}', '{description}', '{photo_url}', 'POINT{coords}'::geography, '{confirmed}')
-                        RETURNING user_id;
-                    """
+    def save(self, username, first_name, last_name, email, password, coords, block_id, address, location_confirmed, description='NULL', photo_url='NULL'):
+        sql_query = """
+            INSERT INTO Profile (
+                username, first_name, last_name, block_id, email, password, address, 
+                description, photo_url, coords, location_confirmed
+            )
+            VALUES ('{username}', '{first_name}', '{last_name}', {block_id}, '{email}', '{password}', '{address}', '{description}', '{photo_url}', 'POINT{coords}', {location_confirmed})
+            RETURNING user_id;
+        """.format(
+            username=username,
+            first_name=first_name,
+            last_name=last_name,
+            block_id=block_id,
+            email=email,
+            password=make_password(password),
+            address=address,
+            description=description,
+            photo_url=photo_url,
+            coords=coords,
+            location_confirmed=location_confirmed
+        )
         result = run_query(sql_query)
         if result:
             user_id = result[0][0]
@@ -39,45 +53,39 @@ class ProfileRegisterView(CustomAPIView):
         else:
             return None
 
-    @sanitize
     def post(self, request):
-        serializer = ProfileSerializer(data=request.san_data)
+        serializer = ProfileSerializer(data=request.data)
         if serializer.is_valid():
-            self.save(**serializer.data)
+            user_id = self.save(**serializer.data)
             
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            response = Response(status=status.HTTP_201_CREATED, data = {"jwt_token": JWTAuthentication().refresh_token(user_id)})
+            return response
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ProfileLogin(APIView):    
-    @sanitize
+
     def post(self, request):
-        serializer = LoginSerializer(data=request.san_data)
+        serializer = LoginSerializer(data=request.data)
 
         if serializer.is_valid():
             username = serializer.data['username']
             hashed_password_input = serializer.data['password']
-    
         if not username or not hashed_password_input:
             raise AuthenticationFailed('Please provide both username and password')
-        
-        user_query = run_query(f"""SELECT password, user_id FROM Profile WHERE username = '{username}';""")
+        user_query = run_query("""SELECT password, user_id FROM Profile WHERE username = '{username}';""".format(username=username))
         hashed_password_from_db = ''
 
         if user_query:
             hashed_password_from_db = user_query[0][0]
             user_id = user_query[0][1]
         passwords_match = check_password(hashed_password_input, hashed_password_from_db)
-
         if not passwords_match:
             raise AuthenticationFailed('Invalid username or password')
 
-        # Generate JWT token
-        expiration_time = int(time.time()) + settings.JWT_EXPIRATION_TIME
-        payload = {'user_id': user_id, 'exp': expiration_time}
-        token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
         response = Response()
-        response.set_cookie('jwt_token', token, httponly=True)
+        response = Response(status=200, data = {"jwt_token": JWTAuthentication().refresh_token(user_id)})
+        
         return response
     
 class MeGET(APIView):
@@ -105,25 +113,41 @@ class EditProfileView(APIView):
     permission_classes = [LoginRequiredPermission]
 
     def save(self, user_id, **kwargs):
-        set_clause = ', '.join([f"{field}='{value}'" for field, value in kwargs.items()])
-        
-        # Use raw SQL to update profile
+        parameters = {}
+        set_clauses = []
+
+        for field, value in kwargs.items():
+            if value is not None:
+                # Format geographic data specifically
+                if field == "coords":
+                    # Assuming the input for 'coords' is like '(x, y)'
+                    parameters[field] = f"{value}', 4326)"
+                    set_clauses.append(f"{field}=ST_PointFromText('POINT{value}', 4326)")
+                else:
+                    # Use the field name as a placeholder key
+                    placeholder = field
+                    parameters[placeholder] = value
+                    set_clauses.append(f"{field}=%({placeholder})s")
+
+        set_clause = ", ".join(set_clauses)
+
         sql_query = f"""
             UPDATE Profile 
             SET {set_clause}
-            WHERE user_id='{user_id}';
+            WHERE user_id=%(user_id)s;
         """
-        # Execute the SQL query
-        result = execute(sql_query)
+        # Execute the SQL query, passing the 'parameters' dictionary which includes 'user_id'
+        parameters['user_id'] = user_id
+        result = execute(sql_query, parameters)  # Assuming 'execute' can handle param dicts
+
         if result:
-            user_id = result[0][0]
             return user_id
         else:
             return None
 
-    @sanitize
     def post(self, request):
-        serializer = EditProfileSerializer(data=request.san_data)
+        serializer = EditProfileSerializer(data=request.data)
+       
         if serializer.is_valid():
             self.save(request.user, **serializer.data)
             

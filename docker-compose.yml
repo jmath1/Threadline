@@ -23,8 +23,7 @@ services:
       - "3000:3000"
     volumes:
       - ./frontend:/app
-    network_mode: host
-    command: npm run start
+    command: sleep 100000 #npm dev
 
   # backend:
   #   build:

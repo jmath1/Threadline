@@ -11,10 +11,10 @@ VALUES (2, 'Lower East Side');
 -- Insert sample data into the Block table for Upper East Side
 INSERT INTO Block (block_id, hood_id, description, name, coords, radius)
 VALUES
-    (0, 1, 'My Block', 'For testing', 'POINT(-73.9562956013475 40.76859165)', 100),
-    (1, 1, 'Upper East Side Block 1', 'UES Block 1', 'POINT(-73.9550 40.7750)', 100),
-    (2, 1, 'Upper East Side Block 2', 'UES Block 2', 'POINT(-73.9575 40.7725)', 100),
-    (3, 1, 'Upper East Side Block 3', 'UES Block 3', 'POINT(-73.9525 40.7775)', 100);
+    (0, 1, 'My Block', 'For testing', 'POINT(-73.95420 40.76774)', 500),
+    (1, 1, 'Upper East Side Block 1', 'UES Block 1', 'POINT(-73.9550 40.7750)', 500),
+    (2, 1, 'Upper East Side Block 2', 'UES Block 2', 'POINT(-73.9575 40.7725)', 500),
+    (3, 1, 'Upper East Side Block 3', 'UES Block 3', 'POINT(-73.9525 40.7775)', 500);
 
 
 -- Insert sample data into the Block table for Lower East Side

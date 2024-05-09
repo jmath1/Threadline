@@ -16,6 +16,8 @@ class ProfileSerializer(serializers.Serializer):
     address = serializers.CharField(max_length=255)   
 
     def confirm_block(self, block_id):
+        if not block_id and block_id != 0:
+            return False
         """
         Checks whether the block has 3 or fewer members. If so, the user location is confirmed.
         """
@@ -25,22 +27,21 @@ class ProfileSerializer(serializers.Serializer):
                         GROUP BY b.block_id"""
         data = run_query(sql_query)
         if data[0][0] <= 3:
+            self.inital_data = True
             return True
+        
+        self.inital_data = False
         return False
     
     def to_representation(self, instance):
         """
         Gets the coordinates from the address
         """
-        
+        block_id, _ = self.process_coords()
+        instance['coords'] = f"({self.coords[0]} {self.coords[1]})"
+        instance['block_id'] = block_id
+        instance['location_confirmed'] = self.confirm_block(block_id)
 
-        # coords are only reprocessed if they are edited
-        if hasattr(self,"coords"):
-            block_id, _ = self.process_coords()
-
-            instance['coords'] = f"({self.coords[0]} {self.coords[1]})"
-            instance['block_id'] = block_id
-            instance['confirmed'] = self.confirm_block(block_id)
         return instance
 
     def is_valid(self, *, raise_exception=False):
@@ -50,7 +51,8 @@ class ProfileSerializer(serializers.Serializer):
         address = self.initial_data.get("address")
         if address:
             self.geocode_address(address)
-            
+            block_id, _ = self.process_coords()
+            self.confirm_block(block_id)
         username = self.initial_data.get("username")
         email = self.initial_data.get("email")
         sql_query = f"""
@@ -66,10 +68,11 @@ class ProfileSerializer(serializers.Serializer):
         """
         Checks to make sure address coords are within a supported block and hood. Returns (block_id, hood_id) if they exist
         """
-        sql_query = f"""
-            SELECT block_id, hood_id FROM Block b WHERE 
-            ST_DWithin('POINT({self.coords[0]} {self.coords[1]})'::geography, b.coords::geography, (b.radius)::integer);
-        """
+        sql_query = f"""SELECT block_id, hood_id FROM Block b WHERE ST_DWithin(
+            b.coords,
+            ST_GeomFromText('POINT({self.coords[0]} {self.coords[1]})', 4326),
+            b.radius
+        );"""
         data = run_query(sql_query)
         if not data:
             raise ValidationError("Block not supported")
@@ -81,24 +84,27 @@ class ProfileSerializer(serializers.Serializer):
         """
         Gets the latitude and longitude of an address
         """
-        params = {
-            'q': address + " New York, NY",
-            'format': 'json',
-            'limit': 1
-        }
 
-        response = requests.get('https://nominatim.openstreetmap.org/search', params=params)
-        try:
-            if response.status_code == 200:
-                data = response.json()
-                if data:
-                    latitude = data[0]['lat']
-                    longitude = data[0]['lon']
-                    self.coords = (longitude, latitude)
-                else:
-                    raise ValidationError("No results found for the provided address.")
-        except:
-            raise ValidationError("There was a problem with the given address")
+        special_chars = {'"', "'", ";"}
+        if any(char in address for char in special_chars):
+            raise ValidationError("It looks like you might be trying something malicious")
+        params = {
+            'locate': address + " New York, NY",
+            'json': 1  ,
+            'auth': '354222234714769519100x71435'
+        }
+        data = {
+            "auth": "354222234714769519100x71435"
+        }
+        response = requests.get("https://geocode.xyz", params=params, data=data)
+
+        if response.status_code == 200:
+            if response.json().get("error"):
+                raise ValidationError("No results found for the provided address.")
+            else:
+                latitude = response.json()['latt']
+                longitude = response.json()['longt']
+                self.coords = (longitude, latitude)
 
         
 class LoginSerializer(serializers.Serializer):
@@ -115,7 +121,14 @@ class EditProfileSerializer(ProfileSerializer):
     photo_url = serializers.CharField(max_length=255, required=False)
     address = serializers.CharField(max_length=200, required=False)   
     
-    def process_coords(self):
-        if self.data.get("coords"):
-            return super().process_coords()
-        return None, None
+    def to_representation(self, instance):
+        """
+        Gets the coordinates from the address
+        """
+        if instance.get("coords"):
+            block_id, _ = self.process_coords()
+            instance['coords'] = f"({self.coords[0]} {self.coords[1]})"
+            instance['block_id'] = block_id
+            instance['location_confirmed'] = self.confirm_block(block_id)
+
+        return instance

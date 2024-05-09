@@ -15,16 +15,17 @@ class JWTAuthentication(BasePermission):
         return user
     
     def authenticate_header(self, request):
-        token = request.COOKIES.get('jwt_token')
-
+        token = request.headers.get('Authorization')
         if not token:
             return None
 
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
         except jwt.ExpiredSignatureError:
+            print("Token EXPIRED")
             raise AuthenticationFailed('Token has expired')
         except jwt.InvalidTokenError:
+            print("Invalid Token")
             raise AuthenticationFailed('Invalid token')
 
         user_id = payload.get('user_id')
@@ -45,7 +46,9 @@ class LoginRequiredPermission(JWTAuthentication):
     """
     def has_permission(self, request, view):
         # Check if the user is authenticated
+
         user_id = self.authenticate(request)
+ 
         if user_id:
             request.user = user_id
             return True

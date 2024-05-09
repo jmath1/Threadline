@@ -38,7 +38,6 @@ class ProfileManager(models.Manager):
         return run_query(sql_query)[0][0]
 
     def create(self, username, first_name, last_name, email, password, coords, block_id, address, confirmed, description='NULL', photo_url='NULL'):
-        import pdb; pdb.set_trace()
         sql_query = f"""INSERT INTO Profile (username, first_name, last_name, block_id, email, password, address, description, photo_url, coords, location_confirmed)
                         VALUES ('{username}', '{first_name}', '{last_name}', '{block_id}','{email}', '{password}', '{address}', '{description}', '{photo_url}', 'POINT{coords}'::geography, '{confirmed}')
                         RETURNING user_id;

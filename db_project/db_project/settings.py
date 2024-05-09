@@ -69,8 +69,11 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
+    'http://0.0.0.0:3000',
     'http://localhost:3000',
+    'http://0.0.0.0:8000',
 ]
+CORS_ALLOW_CREDENTIALS = True
 
 
 ROOT_URLCONF = "db_project.urls"
@@ -161,32 +164,6 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': './logfile.log',
-            'formatter': 'verbose',
-        },
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-    },
-    'formatters': {
-        'verbose': {
-            'format': '{asctime} {levelname} {message}',
-            'style': '{',
-        },
-    },
-}
 
 TEST_RUNNER = 'main.utils.test_runners.TestRunner'
 

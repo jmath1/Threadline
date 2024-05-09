@@ -3,22 +3,36 @@ import './App.css';
 
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import Home from './pages/Home';  // Make sure the path matches where your Home component is located
-//import UserFeed from './pages/UserFeed';
-//import BlockFeed from './pages/BlockFeed';
-//import HoodFeed from './pages/HoodFeed';
-import { AuthProvider } from './context/AuthContext';  // Assuming AuthContext is set up as explained earlier
+import RegisterPage from './pages/RegisterPage';
+import LoginPage from './pages/LoginPage';
+import EditProfilePage from './pages/EditProfilePage';
+import HomePage from './pages/HomePage';
+import FriendsListPage from './pages/FriendsListPage';
+import NeighborsListPage from './pages/NeighborsListPage';
+import NavBar from './components/NavBar';
+import './styles/navbar.css';
+
 
 function App() {
+
   return (
+    <div>
     <Router>
-      <AuthProvider>
+        <NavBar/>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<HomePage/>} />
+          <Route path="/register" element={<RegisterPage/>} />
+          <Route path="/login" element={<LoginPage/>} />
+          <Route path="/edit-profile" element={<EditProfilePage />} />
+          <Route path="/friends-list"element={<FriendsListPage />}></Route>
+          <Route path="/neighbors-list"element={<NeighborsListPage />}></Route>
+          
         </Routes>
-      </AuthProvider>
     </Router>
+    </div>
   );
 }
 
 export default App;
+
+
