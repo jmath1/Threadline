@@ -14,12 +14,15 @@ from main.auth import JWTAuthentication
 from main.auth import LoginRequiredPermission
 from main.serializers import (EditProfileSerializer, LoginSerializer,
                               ProfileSerializer)
-from main.utils.utils import run_query, execute
+from main.utils.utils import run_query, execute, query_to_json
 
 
 def healthcheck(request):
     return HttpResponse("this is a test")
 
+def get_user_id(request):
+    payload = jwt.decode(request.headers.get("Authorization"), settings.SECRET_KEY, algorithms=['HS256'])
+    return payload.get('user_id')
 class CustomAPIView(APIView):
     pass
 
@@ -74,39 +77,25 @@ class ProfileLogin(APIView):
         if not username or not hashed_password_input:
             raise AuthenticationFailed('Please provide both username and password')
         user_query = run_query("""SELECT password, user_id FROM Profile WHERE username = '{username}';""".format(username=username))
-        hashed_password_from_db = ''
 
         if user_query:
-            hashed_password_from_db = user_query[0][0]
-            user_id = user_query[0][1]
-        passwords_match = check_password(hashed_password_input, hashed_password_from_db)
-        if not passwords_match:
+            hashed_password_from_db = user_query[0]["password"]
+            
+        if check_password(hashed_password_input, hashed_password_from_db):
+            user_id = user_query[0]["user_id"]
+            response = Response(status=200, data = {"jwt_token": JWTAuthentication().refresh_token(user_id)})        
+            return response
+        else:
             raise AuthenticationFailed('Invalid username or password')
 
-        response = Response()
-        response = Response(status=200, data = {"jwt_token": JWTAuthentication().refresh_token(user_id)})
-        
-        return response
-    
 class MeGET(APIView):
     permission_classes = [LoginRequiredPermission]
     
     def get(self, request):
         sql_query = f"""SELECT * FROM Profile WHERE user_id = {request.user};"""
         data = run_query(sql_query)[0]
-        data = {
-            "user_id": data[0],
-            "user_name": data[1],
-            "first_name": data[2],
-            "last_name": data[3],
-            "address": data[4],
-            "email": data[5],
-            "description": data[7],
-            "block_id": data[9],
-            "coords": data[10],
-            "confirmed": data[11],
-        }
-
+        del data["password"]
+        
         return JsonResponse(data, status=200)
 
 class EditProfileView(APIView):
@@ -154,27 +143,18 @@ class EditProfileView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    
-def create_user(request):
-    if request.method == "POST":
-        pass
-    else:
-        return HttpResponse(status_code=405)
-    
-def logout(request):
-    # Clear user's session upon logout
-    request.session.clear()
-
 
 # Users
-def get_user_neighbors(request):
-    sql_query = f"""
-        SELECT p.user_id, p.username, p.first_name, p.last_name, p.email
-        FROM Profile p
-        WHERE p.block_id = %s
-    """, [request.user_id]
-    
-    return JsonResponse(run_query(sql_query)[0])
+class GetNeighborList(APIView):
+    permission_classes = [LoginRequiredPermission]
+    def get(self, request):
+        user_id = get_user_id(request)
+        
+        sql_query = f"""
+            SELECT p.user_id, p.username, p.first_name, p.last_name, p.email
+            FROM Profile p;
+        """
+        return JsonResponse({"results": query_to_json(sql_query)})
 
 def get_followers(request):
     
@@ -184,7 +164,7 @@ def get_followers(request):
         JOIN Friendship f ON p.user_id = f.follower_id
         WHERE f.followee_id = %s AND confirmed=true;
     """, [request.user.block_id]
-    return JsonResponse(run_query(sql_query)[0])
+    return JsonResponse(run_query(sql_query))
 
 
 # Blocks

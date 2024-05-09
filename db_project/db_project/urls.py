@@ -24,11 +24,10 @@ urlpatterns = [
     path("user/register/", api.ProfileRegisterView.as_view()),
     path("user/me/", api.MeGET.as_view()),
     path("user/login/", api.ProfileLogin.as_view()),
-    path("user/logout/", api.logout),
     path("user/edit/", api.EditProfileView.as_view()),
     path("user/<int:user_id>/threads/", api.get_user_threads),
     
-    path("users/neighbors/", api.get_user_neighbors),
+    path("users/neighbors/", api.GetNeighborList.as_view()),
     path("users/followers/", api.get_followers),    
     
     path("block/<int:block_id>/threads/", api.get_block_threads),
