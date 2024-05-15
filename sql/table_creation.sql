@@ -1,13 +1,12 @@
 CREATE EXTENSION IF NOT EXISTS postgis;
 
-
 CREATE TABLE Hood (
-    hood_id INT PRIMARY KEY,
+    hood_id SERIAL PRIMARY KEY,
     name VARCHAR(50) UNIQUE
 );
 
 CREATE TABLE Block (
-    block_id INT PRIMARY KEY,
+    block_id SERIAL PRIMARY KEY,
     hood_id INT,
     description TEXT,
     name VARCHAR(100) UNIQUE,
@@ -62,30 +61,28 @@ CREATE TABLE Friendship (
     follower_id INT,
     followee_id INT,
     confirmed BOOLEAN,
+    request BOOLEAN DEFAULT FALSE, 
     FOREIGN KEY (follower_id) REFERENCES Profile(user_id),
     FOREIGN KEY (followee_id) REFERENCES Profile(user_id),
     PRIMARY KEY (follower_id, followee_id)
 );
 
 CREATE TABLE Thread (
-    thread_id INT PRIMARY KEY,
+    thread_id SERIAL PRIMARY KEY,
     title VARCHAR(255),
     block_id INT,
     hood_id INT,
+    author_user_id INT,
+    user_id INT,
+    datetime TIMESTAMP DEFAULT NOW(),
+    FOREIGN KEY (author_user_id) REFERENCES Profile(user_id),
+    FOREIGN KEY (user_id) REFERENCES Profile(user_id),
     FOREIGN KEY (hood_id) REFERENCES Hood(hood_id),
     FOREIGN KEY (block_id) REFERENCES Block(block_id)
 );
 
-CREATE TABLE UserThread (
-    thread_id INT,
-    user_id INT,
-    FOREIGN KEY (thread_id) REFERENCES Thread(thread_id),
-    FOREIGN KEY (user_id) REFERENCES Profile(user_id),
-    PRIMARY KEY (thread_id, user_id)
-);
-
 CREATE TABLE Message (
-    message_id INT PRIMARY KEY,
+    message_id SERIAL PRIMARY KEY,
     thread_id INT,
     user_id INT,
     coords GEOGRAPHY(POINT, 4326),

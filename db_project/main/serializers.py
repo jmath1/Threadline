@@ -2,7 +2,7 @@ import requests
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from main.utils.utils import run_query, get_user_id
+from main.utils.utils import get_user_id, run_query
 
 
 class ProfileSerializer(serializers.Serializer):
@@ -12,7 +12,7 @@ class ProfileSerializer(serializers.Serializer):
     last_name = serializers.RegexField(regex=r'^[a-zA-Z0-9]*$', max_length=50)
     email = serializers.CharField(max_length=25)
     description = serializers.CharField(max_length=255)
-    photo_url = serializers.CharField(max_length=255, required=False)
+    photo_url = serializers.CharField(max_length=255, required=False, allow_null=True)
     address = serializers.CharField(max_length=255)   
 
     def confirm_block(self, block_id):
@@ -57,7 +57,7 @@ class ProfileSerializer(serializers.Serializer):
         username = self.initial_data.get("username")
         email = self.initial_data.get("email")
         sql_query = f"""
-            SELECT COUNT(*) FROM Profile WHERE (username='{username}' OR email='{email}' ) AND user_id != {get_user_id(request)};
+            SELECT COUNT(*) FROM Profile WHERE (username='{username}' OR email='{email}' );
         """
         if run_query(sql_query)[0]["count"] > 0:
             raise ValidationError("Username or email already in use")
@@ -118,7 +118,7 @@ class EditProfileSerializer(ProfileSerializer):
     last_name = serializers.RegexField(regex=r'^[a-zA-Z0-9]*$', max_length=50,required=False)
     email = serializers.CharField(max_length=25,required=False)
     description = serializers.CharField(required=False)
-    photo_url = serializers.CharField(max_length=255, required=False)
+    photo_url = serializers.CharField(max_length=255, required=False, allow_null=True)
     address = serializers.CharField(max_length=200, required=False)   
     
     def to_representation(self, instance):

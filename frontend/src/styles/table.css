@@ -7,6 +7,14 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+  
+
+.user-table {
+    max-height: 50px;
+    overflow-y: auto;
+  }
+  
+
 .neighbor-table th,
 .neighbor-table td {
     border: 1px solid #ccc;
@@ -15,7 +23,7 @@
 }
 
 .neighbor-table th {
-    background-color: #4CAF50;
+    background-color: rgb(85,5,135, .9);
     color: white;
 }
 
@@ -26,3 +34,41 @@
 .neighbor-table tbody tr:hover {
     background-color: #f1f1f1;
 }
+
+
+/* styles.css */
+
+/* Style for the table */
+table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  /* Style for table headers */
+  th {
+    background-color: rgb(85,5,135, .9);
+    padding: 8px;
+    text-align: left;
+    color: white;
+  }
+  
+  /* Style for table cells */
+  td {
+    border-bottom: 1px solid #ddd;
+    padding: 8px;
+  }
+  
+  /* Style for odd rows */
+  tr:nth-child(odd) {
+    background-color: #f9f9f9;
+  }
+  
+  /* Style for links */
+  a {
+    text-decoration: none;
+    color: #0366d6; /* GitHub link color */
+  }
+  
+  a:hover {
+    text-decoration: underline;
+  }

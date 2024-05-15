@@ -46,7 +46,6 @@ class LoginRequiredPermission(JWTAuthentication):
     """
     def has_permission(self, request, view):
         # Check if the user is authenticated
-
         user_id = self.authenticate(request)
  
         if user_id:

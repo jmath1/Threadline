@@ -13,7 +13,7 @@ function RegisterPage() {
     }, [user, navigate]);
 
     return (
-        <div>
+        <div id="container">
             <h1>Register</h1>
             <RegisterForm />
         </div>

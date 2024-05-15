@@ -24,7 +24,7 @@ class ProfileManager(models.Manager):
         sql_query = f"""
             SELECT password FROM PROFILE WHERE username='{username}';
         """
-        return run_query(sql_query)[0][0]
+        return run_query(sql_query)[0].get("password")
         
         
     def count(self, **kwargs):
@@ -35,7 +35,7 @@ class ProfileManager(models.Manager):
         sql_query = f"""
             SELECT COUNT(*) FROM Profile {filter_conditions};
         """
-        return run_query(sql_query)[0][0]
+        return run_query(sql_query)[0]["count"]
 
     def create(self, username, first_name, last_name, email, password, coords, block_id, address, confirmed, description='NULL', photo_url='NULL'):
         sql_query = f"""INSERT INTO Profile (username, first_name, last_name, block_id, email, password, address, description, photo_url, coords, location_confirmed)

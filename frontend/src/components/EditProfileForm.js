@@ -33,15 +33,15 @@ function EditProfileForm({ onSubmit }) {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-        setError(''); // Reset the error message on new submission
+        setError('');
         try {
           await axios.post('http://0.0.0.0:8000/user/edit/', formData,  {headers: {"Authorization": `${localStorage.getItem('jwt_token')}`}});
-          navigate('/'); // Redirect on successful registration
+          navigate('/');
         } catch (error) {
           if (error.response) {
-            setError(JSON.stringify(error.response.data, null, 2) || 'Registration failed.'); // More user-friendly message
+            setError(JSON.stringify(error.response.data, null, 2) || 'Edit failed.');
           } else {
-            setError('Registration failed. Please try again later.');
+            setError('Edit failed. Please try again later.');
           }
         }
     };

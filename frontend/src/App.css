@@ -2,6 +2,11 @@
   text-align: center;
 }
 
+.user-table {
+  max-height: 10;
+  overflow-y: auto;
+}
+
 .App-logo {
   height: 40vmin;
   pointer-events: none;
@@ -13,6 +18,12 @@
   }
 }
 
+#container {
+  padding-left: 50px;
+  padding-right: 50px;
+  justify-content: center;
+
+}
 .App-header {
   background-color: #282c34;
   min-height: 100vh;
@@ -35,4 +46,89 @@
   to {
     transform: rotate(360deg);
   }
+}
+.trash:hover {
+  color: red; /* Change color to red when hovering */
+}
+
+/* threadFormStyles.css */
+
+/* Style for the form container */
+.form-container {
+  width: 300px;
+  margin: 0 auto;
+}
+
+/* Style for form inputs and labels */
+label {
+  display: block;
+  margin-bottom: 10px;
+}
+
+input[type="text"],
+textarea,
+select {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+textarea {
+  height: 100px; /* Adjust as needed */
+}
+
+/* Style for submit button */
+button[type="submit"] {
+  background-color: #4caf50;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button[type="submit"]:hover {
+  background-color: #45a049;
+}
+
+/* Style for disabled submit button */
+button[type="submit"]:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+
+
+/* Style for user details */
+.user-details {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  background-color: #f9f9f9;
+}
+
+.user-details h2 {
+  color: #333;
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.user-details p {
+  color: #666;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+/* Style for links */
+.user-details a {
+  color: #007bff; /* Change link color as needed */
+  text-decoration: none;
+}
+
+.user-details a:hover {
+  text-decoration: underline;
 }

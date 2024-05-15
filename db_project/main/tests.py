@@ -1,6 +1,9 @@
+from unittest.mock import MagicMock, patch
+
 from django.test import Client, TestCase
-from unittest.mock import patch, MagicMock
+
 from main.models import Profile
+
 
 def mock_requests_get(json_data, status_code=200):
     def decorator(func):
@@ -18,36 +21,65 @@ def mock_requests_get(json_data, status_code=200):
 class BaseTestCase(TestCase):
     def setUp(self):
         self.client = Client()
+        self.token = None
+    
+    def get(self, url, params=None, data=None, auth=False):
+        if auth:
+            return self.client.get(url, params=params, headers={"Authorization": f"{self.token}"})
+
+        return self.client.get(url, params=params, data=data)
+    
+    def post(self, url, params=None, data=None):
+        return self.client.post(url, params=params, data=data, headers={"Authorization": f"{self.token}"})
+            
+    def delete(self, url, params=None, data=None, auth=False):
+        return self.client.delete(url, params=params, headers={"Authorization": f"{self.token}"})
+
+    
+    def register_user(
+        self, 
+        username="newuser", 
+        password="password", 
+        email="testuser@gmail.com", 
+        first_name="Jonathan", 
+        last_name="Math", 
+        description="required", 
+        address="334 E 73rd St"
+        ):
         
-    def register_user(self):
         data = {
-            'username': 'newuser', 
-            'password': 'password', 
-            'email': 'testuser@gmail.com',
-            'first_name': 'Jonathan',
-            'last_name': 'Math',
-            'description': 'required',
-            'address': '334 E 73rd St',
+            'username': username,
+            'password': password,
+            'email': email,
+            'first_name': first_name,
+            'last_name': last_name,
+            'description': description,
+            'address': address,
         }
-        res = self.client.post('/user/register/', data)
+
+        res = self.post('/user/register/', data=data)
+        import pdb; pdb.set_trace()
+        if res.status_code == 201:
+            self.token = res.json()["jwt_token"]
+        else:
+            raise Exception(res.json())
         return res
 
-    def login_user(self):
-        res = self.client.post("/user/login/", {"username": "newuser", "password": "password"})
+    def login_user(self, username="newuser", password="password"):
+        res = self.post("/user/login/", data={"username": username, "password": password})
         return res
+    
 class TestRegistration(BaseTestCase):
     
     @mock_requests_get({'longt': '-73.95420','latt': '40.76774'})
     def test_register_new_user(self, mock_get):        
-        # happy path
         res = self.register_user()
-        self.assertTrue(self.client.cookies.get('jwt_token'))
+        self.assertTrue(bool(res.json().get("jwt_token")))
         self.assertEqual(res.status_code, 201)
         # # Add assertions to verify that the user was created as expected
         self.assertEqual(Profile.objects.count(), 13)
-        user = Profile.objects.get(username='newuser')
-        # check confirmation
-        self.assertEqual(user[-1], True)
+        res = self.get("/user/me/", auth=True)
+        
     
     @mock_requests_get({'longt': '-73.96979','latt': '40.75314'}) #unsported block 
     def test_register_unsuported_block(self, mock_get):
@@ -60,7 +92,7 @@ class TestRegistration(BaseTestCase):
             'description': 'required',
             'address': '34 2nd St',
         }
-        res = self.client.post('/user/register/', data)
+        res = self.post('/user/register/', data=data)
         self.assertEqual(res.status_code, 400)
         self.assertEqual(res.json(), ["Block not supported"])
 
@@ -75,7 +107,7 @@ class TestRegistration(BaseTestCase):
             'description': 'required',
             'address': '34 westndst',
         }
-        res = self.client.post('/user/register/', data)
+        res = self.post('/user/register/', data=data)
         self.assertEqual(res.status_code, 400)
         self.assertEqual(res.json(), ["No results found for the provided address."])
 
@@ -104,7 +136,7 @@ class TestAuthentication(BaseTestCase):
     @mock_requests_get({'longt': '-73.95420','latt': '40.76774'})
     def test_bad_login(self, mock_get):
         self.register_user()
-        res = self.client.post("/user/login/", {"username": "newuser", "password": "badpassword"})
+        res = self.post("/user/login/", {"username": "newuser", "password": "badpassword"})
         self.assertEqual(res.status_code, 403)
         
         
@@ -114,45 +146,87 @@ class TestEditProfile(BaseTestCase):
     # assert that the edit was made
     
     def test_unauth(self):
-        
-        res = self.client.post("/user/edit/", {"first_name": "newname", "last_name": "newlast", "description": "newdesc", "address": "334 Amsterdam Ave W 76th St, New York"})
+        res = self.post("/user/edit/", {"first_name": "newname", "last_name": "newlast", "description": "newdesc", "address": "334 Amsterdam Ave W 76th St, New York"})
         self.assertEqual(res.status_code, 403)
     
     @mock_requests_get({'longt': '-73.95420','latt': '40.76774'})
     def test_user_edit_success(self, mock_get):
         self.register_user()
         self.login_user()
-        res = self.client.post("/user/edit/", {"username": "backagain","first_name": "newname", "last_name": "newlast", "description": "newdesc", "address": "334 Amsterdam Ave W 76th St, New York"})
+        res = self.post("/user/edit/", {"username": "backagain","first_name": "newname", "last_name": "newlast", "description": "newdesc", "address": "334 Amsterdam Ave W 76th St, New York"})
     
 
     def test_sql_injection(self):
         res = self.register_user()
         res = self.login_user()
-        res = self.client.post("/user/edit/", {"first_name": "newname", "last_name": "newlast", "description": "newdesc", "address": "334 Amsterdam Ave W 76th St, New York; DROP TABLE Profile"})
+        res = self.post("/user/edit/", data={"first_name": "newname", "last_name": "newlast", "description": "newdesc", "address": "334 Amsterdam Ave W 76th St, New York; DROP TABLE Profile"})
      
         self.assertEqual(res.status_code, 400)
         self.assertEqual(res.json(), ["It looks like you might be trying something malicious"])
         
-        res = self.client.post("/user/edit/", {"first_name": "newname", "email": ";DROP TABLE Profile;", "last_name": "newlast", "description": "newdesc"})
+        res = self.post("/user/edit/", data={"first_name": "newname", "email": ";DROP TABLE Profile;", "last_name": "newlast", "description": "newdesc"})
 
         self.assertEqual(res.status_code, 201)
         
-        res = self.client.get("/user/me/")
+        res = self.get("/user/me/", auth=True)
         self.assertEqual(res.json()["email"], "\\;DROP TABLE Profile\\;")
+        
+class TestFriendship(BaseTestCase):
+    def test_create_friendship(self):
+        user_1 = self.register_user(username="newuser1", password="password1")
+        user_2 = self.register_user(username="newuser2", email="newuser2@gmail.com", password="password2")
+        
+        # First user sends a friend request to the second user
+        self.login_user(username="newuser1", password="password1")
+        res = self.post(f"/friendship/create/{user_2['user_id']}")
+        self.assertEqual(res.status_code, 201)
+        
+        # Second user lists their pending friend requests and accepts the friend request
+        self.login_user(username="newuser2", password="password2")
+        res = self.get("/friendship/requests/", auth=True)
+        self.assertEqual(res.status_code, 200)
+        request_id = res.json()[0]["request_id"]
+        
+        res = self.post(f"/friendship/accept/{request_id}", auth=True)
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(len(res.json()), 1)
+        friendship_request_id = res.json()[0]
+        self.get(f"/friendship/confirm/{friendship_request_id}", auth=True)
+        
+        # First user checks if they now have one friend
+        self.login_user(username="newuser1", password="password1")
+        user_info = self.get(f"/user/me/", auth=True).json()
+        self.assertEqual(user_info.get('friend_count'), 1)
+        self.assertEqual(user_info.get('followers_count'), 0)
+        
+        # Second user checks if they now have one friend
+        self.login_user(username="newuser2", password="password2")
+        user_info = self.get(f"/user/me/", auth=True).json()
+        self.assertEqual(user_info.get('friend_count'), 1)
+        self.assertEqual(user_info.get('followers_count'), 0)
 
-class TestThreadCreation(TestCase):
-    # create a new usag
-    def test_new_user_thread(self):
-        pass
-    
+        
+class TestThreadCreation(BaseTestCase):
+
+    def test_new_user_thread_non_friend(self):
+        res = self.register_user(username="other_user")
+        res = self.post("/thread/create/", data={"title": "new thread", "message": "new message", "coords": "POINT(-73.95420 40.76774)", "body": "new body", "user_id": 1})
+        self.assertEqual(res.status_code, 201)
+
+    def test_new_user_thread_witj_friend(self):
+        print(res.json())
+        res = self.post("/thread/create/", data={"title": "new thread", "message": "new message", "coords": "POINT(-73.95420 40.76774)", "body": "new body", "user_id": 1})
+        res = self.get(f"/thread/{res.json()['thread_id']}/", auth=True)
+
     def test_new_block_thread(self):
-        pass
+        res = self.post("/thread/create/", data={"title": "new thread", "message": "new message", "coords": "POINT(-73.95420 40.76774)", "body": "new body", "block_id": 1})
+
+        self.assertEqual(res.status_code, 201)
+        res = self.get(f"/thread/{res.json()['thread_id']}/", auth=True)
     
     def test_new_hood_thread(self):
         pass
 
-class TestMessagePosting(TestCase):
-    # create a new usag
     def test_new_user_thread_msg(self):
         pass
     

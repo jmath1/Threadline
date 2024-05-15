@@ -1,7 +1,84 @@
+import jwt
+import requests
 from django.conf import settings
 from django.db import connection
-import jwt
+from rest_framework.exceptions import ValidationError
+from rest_framework.request import QueryDict
 
+
+def sanitize_json_input(querydict):
+    sanitized_querydict = QueryDict(mutable=True)
+    for key, v in querydict.items():
+        sv = v
+        sv = v.replace("'", "''")
+        sv = v.replace('"', '\\"')
+        sv = v.replace('\\', '\\\\')
+        sv = v.replace(';', '\\;')
+        sanitized_querydict.appendlist(key, sv)
+    return sanitized_querydict
+
+def validate_coords(coords, user, validity_type=None):
+    # user threads are validated automatically as True. This way, friends can discuss anything,
+    # block threads are only valid within their area.
+    # hood threads are valid within the area of their corresponding blocks
+
+    if validity_type is None:
+        return True
+
+    if validity_type:
+        if validity_type == "user":
+            return True
+        
+        if validity_type == "block":
+            sql_query = f"""
+                SELECT DISTINCT b.block_id
+                FROM Block b
+                AND ST_DWithin(ST_Point({coords})::geography, b.center::geography, b.radius)
+            """
+            data = run_query(sql_query)
+            if data and data["block_id"] == user["block_id"]:
+                return True
+            
+        if validity_type == "hood":
+            sql_query = f"""
+                SELECT DISTINCT b.hood_id
+                FROM Block b
+                AND ST_DWithin(ST_Point({coords})::geography, b.center::geography, b.radius)
+            """
+            data = run_query(sql_query)
+            if data and data["hood_id"] == user["hood_id"]:
+                return True
+         
+    
+    return False
+        
+        
+def get_cords_from_address(address):
+    """
+    Gets the latitude and longitude of an address
+    """
+
+    special_chars = {'"', "'", ";"}
+    if any(char in address for char in special_chars):
+        raise ValidationError("It looks like you might be trying something malicious")
+    params = {
+        'locate': address + " New York, NY",
+        'json': 1  ,
+        'auth': '354222234714769519100x71435'
+    }
+    data = {
+        "auth": "354222234714769519100x71435"
+    }
+    response = requests.get("https://geocode.xyz", params=params, data=data)
+
+    if response.status_code == 200:
+        if response.json().get("error"):
+            raise ValidationError("No results found for the provided address.")
+        else:
+            latitude = response.json()['latt']
+            longitude = response.json()['longt']
+            return (longitude, latitude)
+    return (None, None)
 
 def get_user_id(request):
     payload = jwt.decode(request.headers.get("Authorization"), settings.SECRET_KEY, algorithms=['HS256'])
@@ -9,7 +86,10 @@ def get_user_id(request):
 
 def execute(sql):
     cursor = connection.cursor()
-    return cursor.execute(sql)
+    try:
+        return cursor.execute(sql)
+    except Exception as exc:
+        print(f"An error occurred: {exc}")
 
 def run_query(sql_query, params=None):
     with connection.cursor() as cursor:
@@ -32,9 +112,7 @@ def query_to_json(sql_query, params=None):
 
     Returns:
         str: JSON string containing the query results.
-    """
-    # Connect to the database
-    
+    """    
     try:
         with connection.cursor() as cursor:
             cursor.execute(sql_query, params)

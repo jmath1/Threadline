@@ -26,13 +26,12 @@ function Home() {
   }, []);
   let userData = JSON.parse(localStorage.getItem('user'));
   return (
-    <div>
-      <HealthStatusDisplay />
+    <div id="container">
       {userData && (
         <div>
           <h2>User Profile</h2>
           <p><strong>User ID:</strong> {userData.user_id}</p>
-          <p><strong>Username:</strong> {userData.user_name}</p>
+          <p><strong>Username:</strong> {userData.username}</p>
           <p><strong>Name:</strong> {`${userData.first_name} ${userData.last_name}`}</p>
           <p><strong>Address:</strong> {userData.address.replace("\\", "")}</p>
           <p><strong>Email:</strong> {userData.email.replace("\\", "")}</p>

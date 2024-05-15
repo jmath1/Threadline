@@ -6,7 +6,7 @@ function EditProfilePage() {
 
 
     return (
-        <div>
+        <div id="container">
             <h1>Edit Profile</h1>
             <EditProfileForm />
         </div>
