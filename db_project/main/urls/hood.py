@@ -1,5 +1,4 @@
 from django.urls import path
-
 from main.api import hood
 
 urlpatterns = [

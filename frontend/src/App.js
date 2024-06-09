@@ -9,7 +9,6 @@ import EditProfilePage from './pages/EditProfilePage';
 import HomePage from './pages/HomePage';
 import FriendsListPage from './pages/FriendsListPage';
 import NeighborsListPage from './pages/NeighborsListPage';
-import ThreadsPage from './pages/ThreadsPage';
 import NavBar from './components/NavBar';
 import CreateThreadPage from './pages/CreateThreadPage';
 import './styles/navbar.css';
@@ -17,11 +16,15 @@ import './styles/table.css';
 import FeedPage from './pages/FeedPage';
 import ThreadViewPage from './pages/ThreadViewPage';
 import UserDetailPage from './pages/UserDetailPage';
+import SearchPage from './pages/SearchPage';
+import 'leaflet/dist/leaflet.css';
 
 function App() {
 
   return (
     <div>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
     <Router>
         <NavBar/>
         <Routes>
@@ -29,9 +32,8 @@ function App() {
           <Route path="/register" element={<RegisterPage/>} />
           <Route path="/login" element={<LoginPage/>} />
           <Route path="/edit-profile" element={<EditProfilePage />} />
-
+          <Route path="/search/" element={<SearchPage />} />
           <Route path="/user/:user_id/" element={<UserDetailPage />} />
-          <Route path="/threads" element={<ThreadsPage />} />
           <Route path="/friends-list"element={<FriendsListPage />}></Route>
           <Route path="/neighbors-list"element={<NeighborsListPage />}></Route>
           <Route path="/user-feed"element={<FeedPage feedType={"user"}/>}></Route>

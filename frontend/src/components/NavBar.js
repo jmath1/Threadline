@@ -28,13 +28,14 @@ function Navbar(props) {
         {user ? (
           <>
             <li><NavLink to="/" exact activeClassName="active">Home</NavLink></li>
-            <li><NavLink to="/threads" activeClassName="active">Threads</NavLink></li>
             <li><Link to="/user-feed">User Feed</Link></li>
             <li><Link to="/block-feed">Block Feed</Link></li>
             <li><Link to="/hood-feed">Hood Feed</Link></li>
             <li><Link to="/edit-profile">Edit Profile</Link></li>
             <li><Link to="/friends-list">Friends</Link></li>
             <li><Link to="/neighbors-list">Neighbors</Link></li>
+
+            <li><Link to="/search">Search</Link></li>
             <li><Link to="/login" onClick={handleLogout}>Logout</Link></li>
           </>
         ) : (

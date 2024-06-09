@@ -30,7 +30,7 @@ function RegisterForm({ onSubmit }) {
         try {
           let res = await axios.post('http://0.0.0.0:8000/user/register/', formData);
           localStorage.setItem('jwt_token', res.data.jwt_token);
-          navigate('/'); // Redirect on successful registration
+          navigate('/');
         } catch (error) {
           if (error.response) {
             
@@ -67,6 +67,7 @@ function RegisterForm({ onSubmit }) {
                 required
             />
         </div>
+        <br></br>
         <div className="form-group">
             <label htmlFor="email">Email: </label>
             <input
@@ -79,6 +80,7 @@ function RegisterForm({ onSubmit }) {
             required
             />
         </div>
+        <br></br>
         <div className="form-group">
             <label htmlFor="first_name">First Name: </label>
             <input
@@ -88,6 +90,7 @@ function RegisterForm({ onSubmit }) {
             name="first_name"
             value={formData.first_name}
             onChange={handleChange}
+            required
             />
         </div>
         <div className="form-group">
@@ -99,6 +102,7 @@ function RegisterForm({ onSubmit }) {
             name="last_name"
             value={formData.last_name}
             onChange={handleChange}
+            required
             />
         </div>
         <div className="form-group">
@@ -110,6 +114,7 @@ function RegisterForm({ onSubmit }) {
             name="address"
             value={formData.address}
             onChange={handleChange}
+            required
             />
         </div>
         <div className="form-group">
@@ -121,6 +126,7 @@ function RegisterForm({ onSubmit }) {
             rows="3"
             value={formData.description}
             onChange={handleChange}
+            required
             />
         </div>
         <div className="form-group">
@@ -134,6 +140,7 @@ function RegisterForm({ onSubmit }) {
             onChange={handleChange}
             />
         </div>
+        <br></br>
         <button type="submit" className="btn btn-primary">Submit</button>
         </form>
         </div>

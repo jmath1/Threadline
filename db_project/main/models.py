@@ -2,7 +2,6 @@
 from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.gis.db import models as gis_models
 from django.db import models
-
 from main.managers import *
 from main.utils.utils import run_query
 

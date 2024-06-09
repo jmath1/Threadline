@@ -74,7 +74,7 @@ CREATE TABLE Thread (
     hood_id INT,
     author_user_id INT,
     user_id INT,
-    datetime TIMESTAMP DEFAULT NOW(),
+    datetime TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     FOREIGN KEY (author_user_id) REFERENCES Profile(user_id),
     FOREIGN KEY (user_id) REFERENCES Profile(user_id),
     FOREIGN KEY (hood_id) REFERENCES Hood(hood_id),
@@ -87,7 +87,7 @@ CREATE TABLE Message (
     user_id INT,
     coords GEOGRAPHY(POINT, 4326),
     body TEXT,
-    datetime TIMESTAMP DEFAULT NOW(),
+    datetime TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     FOREIGN KEY (thread_id) REFERENCES Thread(thread_id),
     FOREIGN KEY (user_id) REFERENCES Profile(user_id)
 );
@@ -95,7 +95,7 @@ CREATE TABLE Message (
 CREATE TABLE UserAccess (
     user_id INT,
     thread_id INT NULL,
-    datetime TIMESTAMP DEFAULT NOW(),
+    datetime TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     FOREIGN KEY (user_id) REFERENCES Profile(user_id),
     FOREIGN KEY (thread_id) REFERENCES Thread(thread_id)
 );
@@ -107,9 +107,10 @@ CREATE TABLE Notifications (
     notification_type VARCHAR(50),
     thread_id INT,
     message_id INT,
-    datetime TIMESTAMP DEFAULT NOW(),
+    datetime TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     FOREIGN KEY (to_user) REFERENCES Profile(user_id),
     FOREIGN KEY (user_id) REFERENCES Profile(user_id),
     FOREIGN KEY (thread_id) REFERENCES Thread(thread_id),
     FOREIGN KEY (message_id) REFERENCES Message(message_id)
 );
+

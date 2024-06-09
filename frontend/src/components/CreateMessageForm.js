@@ -16,7 +16,7 @@ const CreateMessageForm = (props) => {
         try {
           // Make AJAX call to create thread
           const response = await axios.post(
-            'http://0.0.0.0:8000/thread/message/',
+            `http://0.0.0.0:8000/thread/message/${props.thread_id}/create/`,
             {
               ...formData,
               thread_id: props.threadId // Use thread_id from props
@@ -29,18 +29,19 @@ const CreateMessageForm = (props) => {
           // Reset form data after successful submission
           setFormData({ body: '', address: '' });
         } catch (error) {
-          console.error('Error creating thread:', error);
+          alert(error)
         }
         };
     
       return (
-        <form onSubmit={handleSubmit}>
+        <form className="thread-form" onSubmit={handleSubmit}>
           <label>
             Body:
             <textarea
               name="body"
               value={formData.body}
               onChange={handleChange}
+              maxlength="255"
               required
             />
           </label>
@@ -53,10 +54,11 @@ const CreateMessageForm = (props) => {
               value={formData.address}
               onChange={handleChange}
               required
+              maxlength="200"
             />
           </label>
           <br />
-          <button type="submit">Submit</button>
+          <button type="submit">Submit Message</button>
         </form>
       );
 };

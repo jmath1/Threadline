@@ -1,6 +1,5 @@
 from django import forms
 from django.contrib.gis import forms as gis_forms
-
 from main.models import Profile
 
 

@@ -23,19 +23,22 @@ services:
       - "3000:3000"
     volumes:
       - ./frontend:/app
-    command: sleep 100000 #npm dev
+    command: npm run start
 
-  # backend:
-  #   build:
-  #     context: ./db_project
-  #     dockerfile: ../docker/back.Dockerfile
-  #   command: sleep 10000 #python manage.py runserver 0.0.0.0:8000
-  #   volumes:
-  #     - ./db_project:/app
-  #     - ./venv/lib/python3.11/site-packages:/usr/local/lib/python3.11/site-packages
-  #   ports:
-  #     - "8000:8000"
-  #   depends_on:
-  #     - postgres
-  #   environment:
-  #     DATABASE_URL: postgres://myuser:mypassword@db:5432/project1
+  backend:
+    build:
+      context: ./db_project
+      dockerfile: ../docker/back.Dockerfile
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./db_project:/app
+      - ./venv/lib/python3.11/site-packages:/usr/local/lib/python3.11/site-packages
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgres://myuser:mypassword@db:5432/project1
+    env_file:
+      - .env
+

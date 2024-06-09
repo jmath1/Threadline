@@ -5,7 +5,6 @@ from typing import Any
 from django.db.backends.base.base import BaseDatabaseWrapper
 from django.test.runner import DiscoverRunner
 from django.test.utils import setup_databases
-
 from main.utils.utils import execute
 
 

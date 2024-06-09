@@ -1,9 +1,8 @@
 from django.http import JsonResponse
-from rest_framework.views import APIView
-
 from main.api.general import CustomAPIView
 from main.auth import LoginRequiredPermission
 from main.utils.utils import get_user_id, query_to_json
+from rest_framework.views import APIView
 
 
 class GetHoodFollows(APIView):

@@ -22,6 +22,7 @@
   padding-left: 50px;
   padding-right: 50px;
   justify-content: center;
+  width: 80%;
 
 }
 .App-header {
@@ -57,6 +58,10 @@
 .form-container {
   width: 300px;
   margin: 0 auto;
+}
+
+#thread-form {
+  padding-right: 1000px;
 }
 
 /* Style for form inputs and labels */
@@ -131,4 +136,87 @@ button[type="submit"]:disabled {
 
 .user-details a:hover {
   text-decoration: underline;
+}
+
+
+#container {
+  padding: 50px;
+}
+
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+.user-table th, .user-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+
+
+.friend-requests {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.friend-request {
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 200px;
+}
+
+.friend-request button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.friend-request button:hover {
+  color: #007bff;
+}
+
+#map {
+  position: absolute;
+  top: 100px;  /* Adjust as needed for spacing */
+  right: 50px;  /* Adjust as needed for spacing */
+  height: 400px;
+  width: 400px;
+  z-index: 1000;  /* Ensure it is on top of other elements */
+}
+
+.message-item {
+  border: 1px solid #ddd; /* Border around each message */
+  border-radius: 5px; /* Optional: adds rounded corners */
+  padding: 15px; /* Padding inside each message */
+  margin-bottom: 10px; /* Space between messages */
+  background-color: #f9f9f9; /* Background color for each message */
+  position: relative; /* Positioning for buttons */
+}
+
+.message-buttons {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.message-buttons button {
+  margin-left: 5px; /* Space between buttons */
+  background-color: #007bff; /* Button color */
+  color: white; /* Button text color */
+  border: none; /* Remove border */
+  padding: 5px 10px; /* Padding inside buttons */
+  border-radius: 3px; /* Optional: rounded corners */
+  cursor: pointer; /* Pointer cursor on hover */
+}
+
+.message-buttons button:hover {
+  background-color: #0056b3; /* Darker button color on hover */
 }

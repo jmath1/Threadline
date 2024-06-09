@@ -1,14 +1,13 @@
 from django.contrib.auth.hashers import check_password, make_password
 from django.http import HttpResponse, JsonResponse
-from rest_framework import status
-from rest_framework.exceptions import AuthenticationFailed
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
 from main.auth import JWTAuthentication, LoginRequiredPermission
 from main.serializers import (EditProfileSerializer, LoginSerializer,
                               ProfileSerializer)
 from main.utils.utils import execute, get_user_id, query_to_json, run_query
+from rest_framework import status
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 
 class CustomAPIView(APIView):

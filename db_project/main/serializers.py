@@ -1,9 +1,16 @@
+import os
+
 import requests
+from main.utils.utils import get_user_id, query_to_json, run_query
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from main.utils.utils import get_user_id, run_query
 
+class FriendshipSerializer(serializers.Serializer):
+    follower_id = serializers.IntegerField()
+    followee_id = serializers.IntegerField()
+    requested = serializers.BooleanField()
+    confirmed = serializers.BooleanField()
 
 class ProfileSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=50)
@@ -25,11 +32,11 @@ class ProfileSerializer(serializers.Serializer):
                         JOIN Block b ON p.block_id = b.block_id 
                         WHERE b.block_id = {block_id} 
                         GROUP BY b.block_id"""
-        
         data = run_query(sql_query)
-        if data[0]["count"] <= 3:
-            self.inital_data = True
-            return True
+        if data:
+            if data[0].get("count") <= 3:
+                self.inital_data = True
+                return True
         
         self.inital_data = False
         return False
@@ -46,9 +53,6 @@ class ProfileSerializer(serializers.Serializer):
         return instance
 
     def is_valid(self, request=None, raise_exception=False):
-        """
-        validates username and email
-        """
         address = self.initial_data.get("address")
         if address:
             self.geocode_address(address)
@@ -56,10 +60,12 @@ class ProfileSerializer(serializers.Serializer):
             self.confirm_block(block_id)
         username = self.initial_data.get("username")
         email = self.initial_data.get("email")
+
         sql_query = f"""
-            SELECT COUNT(*) FROM Profile WHERE (username='{username}' OR email='{email}' );
+            SELECT COUNT(*) AS email_count FROM Profile WHERE (username='{username}' AND user_id !={request.user}) OR (email='{email}' AND user_id !={request.user});
         """
-        if run_query(sql_query)[0]["count"] > 0:
+        data = run_query(sql_query)
+        if (data[0]["email_count"] > 0):
             raise ValidationError("Username or email already in use")
         
         return super().is_valid(raise_exception=raise_exception)
@@ -70,14 +76,14 @@ class ProfileSerializer(serializers.Serializer):
         """
         sql_query = f"""SELECT block_id FROM Block b WHERE ST_DWithin(
             b.coords,
-            ST_GeomFromText('POINT({self.coords[0]} {self.coords[1]})', 4326),
+            ST_SetSRID(ST_MakePoint({self.coords[0]}, {self.coords[1]}), 4326),
             b.radius
         );"""
-        data = run_query(sql_query)
+        data = query_to_json(sql_query)
         if not data:
             raise ValidationError("Block not supported")
         else:
-            return data[0]["block_id"], None
+            return data[0].get("block_id"), None
         
         
     def geocode_address(self, address):
@@ -88,22 +94,22 @@ class ProfileSerializer(serializers.Serializer):
         special_chars = {'"', "'", ";"}
         if any(char in address for char in special_chars):
             raise ValidationError("It looks like you might be trying something malicious")
+
+        api_key = os.getenv("GOOGLE_API_KEY")
+        endpoint = "https://maps.googleapis.com/maps/api/geocode/json"
         params = {
-            'locate': address + " New York, NY",
-            'json': 1  ,
-            'auth': '354222234714769519100x71435'
+            "address": address,
+            "key": api_key
         }
-        data = {
-            "auth": "354222234714769519100x71435"
-        }
-        response = requests.get("https://geocode.xyz", params=params, data=data)
+    
+        response = requests.get(endpoint, params=params)
 
         if response.status_code == 200:
             if response.json().get("error"):
                 raise ValidationError("No results found for the provided address.")
             else:
-                latitude = response.json()['latt']
-                longitude = response.json()['longt']
+                latitude = response.json()['results'][0]['geometry']['bounds']['northeast']['lat']
+                longitude = response.json()['results'][0]['geometry']['bounds']['northeast']['lng']
                 self.coords = (longitude, latitude)
 
         

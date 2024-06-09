@@ -6,26 +6,40 @@ const ThreadForm = (props) => {
     title: '',
     block_id: null,
     hood_id: null,
-    user_id: null,
-    threadType: 'UserThread',
+    user_id: '',
+    threadType: null,
     messageBody: '',
     address: ''
   });
 
   const [friendsList, setFriendsList] = useState([]);
+  const [userInfo, setUserInfo] = useState({ block_id: null, hood_id: null });
 
   useEffect(() => {
     fetchFriendsList();
+    fetchUserInfo();
   }, []);
 
   const fetchFriendsList = async () => {
     try {
-      // Make AJAX call to fetch friends list data
-      const response = await axios.get('http://0.0.0.0:8000/user/friends/', {headers: {"Authorization": `${localStorage.getItem('jwt_token')}`}});
-      console.log("Friends list response:", response.data)
+      const response = await axios.get('http://0.0.0.0:8000/user/friends/', {
+        headers: { Authorization: `${localStorage.getItem('jwt_token')}` }
+      });
+      console.log("Friends list response:", response.data);
       setFriendsList(response.data.results);
     } catch (error) {
       console.error('Error fetching friends list:', error);
+    }
+  };
+
+  const fetchUserInfo = async () => {
+    try {
+      const response = await axios.get('http://0.0.0.0:8000/user/me/', {
+        headers: { Authorization: `${localStorage.getItem('jwt_token')}` }
+      });
+      setUserInfo({ block_id: response.data.block_id, hood_id: response.data.hood_id });
+    } catch (error) {
+      console.error('Error fetching user info:', error);
     }
   };
 
@@ -34,26 +48,37 @@ const ThreadForm = (props) => {
   };
 
   const handleSubmit = async (e) => {
+    fetchUserInfo()
     e.preventDefault();
+    console.log(formData)
+    let dataToSend = { ...formData };
+    if (formData.threadType === 'blockThread') {
+      dataToSend.block_id = userInfo.block_id;
+    } else if (formData.threadType === 'hoodThread') {
+      dataToSend.hood_id = userInfo.hood_id;
+    } else if (formData.threadType === 'userThread') {
+      dataToSend.user_id = formData.userId;
+    }
+
     try {
-      // Make AJAX call to create thread
-      const response = await axios.post('http://0.0.0.0:8000/thread/create/', formData , {headers: {"Authorization": `${localStorage.getItem('jwt_token')}`}});
-      console.log('Thread created:', response.data);
-      // Reset form data after successful submission
+      await axios.post('http://0.0.0.0:8000/thread/create/', dataToSend, {
+        headers: { Authorization: `${localStorage.getItem('jwt_token')}` }
+      });
+      
       setFormData({
         title: '',
         block_id: null,
         hood_id: null,
-        user_id: null,
-        threadType: 'UserThread',
+        user_id: '',
+        threadType: props.threadType,
         messageBody: '',
-        address: '' // Reset address field
+        address: ''
       });
     } catch (error) {
       console.error('Error creating thread:', error);
     }
   };
-
+  
   return (
     <form onSubmit={handleSubmit}>
       <label>
@@ -67,9 +92,17 @@ const ThreadForm = (props) => {
       </label>
       <br />
   
+      <label>
+        Thread Type:
+        <select name="threadType" value={formData.threadType} onChange={handleChange}>
+          <option value="blockThread">Block Thread</option>
+          <option value="hoodThread">Hood Thread</option>
+          <option value="userThread">User Thread</option>
+        </select>
+      </label>
       <br />
-      {console.log(props.threadType)}
-      {props.threadType === 'user' && (
+  
+      {formData.threadType === 'userThread' && (
         <label>
           Select Friend:
           <select name="user_id" value={formData.user_id} onChange={handleChange}>
@@ -106,7 +139,7 @@ const ThreadForm = (props) => {
       </label>
       <br />
 
-      <button type="submit" disabled={!formData.user_id && props.threadType === "user"}>Submit</button>
+      <button type="submit" disabled={!formData.user_id && formData.threadType === 'userThread'}>Submit</button>
     </form>
   );
 };

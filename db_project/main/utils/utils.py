@@ -1,3 +1,5 @@
+import os
+
 import jwt
 import requests
 from django.conf import settings
@@ -9,12 +11,15 @@ from rest_framework.request import QueryDict
 def sanitize_json_input(querydict):
     sanitized_querydict = QueryDict(mutable=True)
     for key, v in querydict.items():
-        sv = v
-        sv = v.replace("'", "''")
-        sv = v.replace('"', '\\"')
-        sv = v.replace('\\', '\\\\')
-        sv = v.replace(';', '\\;')
-        sanitized_querydict.appendlist(key, sv)
+        if isinstance(v, str):
+            sv = v
+            sv = v.replace("'", "''")
+            sv = v.replace('"', '\\"')
+            sv = v.replace('\\', '\\\\')
+            sv = v.replace(';', '\\;')
+            sanitized_querydict.appendlist(key, sv)
+        else:
+            sanitized_querydict.appendlist(key, v)
     return sanitized_querydict
 
 def validate_coords(coords, user, validity_type=None):
@@ -58,25 +63,23 @@ def get_cords_from_address(address):
     Gets the latitude and longitude of an address
     """
 
-    special_chars = {'"', "'", ";"}
-    if any(char in address for char in special_chars):
-        raise ValidationError("It looks like you might be trying something malicious")
+    api_key = os.getenv("GOOGLE_API_KEY")
+    endpoint = "https://maps.googleapis.com/maps/api/geocode/json"
     params = {
-        'locate': address + " New York, NY",
-        'json': 1  ,
-        'auth': '354222234714769519100x71435'
+        "address": address,
+        "key": api_key
     }
-    data = {
-        "auth": "354222234714769519100x71435"
-    }
-    response = requests.get("https://geocode.xyz", params=params, data=data)
+
+    response = requests.get(endpoint, params=params)
 
     if response.status_code == 200:
         if response.json().get("error"):
             raise ValidationError("No results found for the provided address.")
         else:
-            latitude = response.json()['latt']
-            longitude = response.json()['longt']
+            latitude = response.json()['results'][0]['geometry']['location']['lat']
+            longitude = response.json()['results'][0]['geometry']['location']['lng']
+            
+
             return (longitude, latitude)
     return (None, None)
 
@@ -84,12 +87,13 @@ def get_user_id(request):
     payload = jwt.decode(request.headers.get("Authorization"), settings.SECRET_KEY, algorithms=['HS256'])
     return payload.get('user_id')
 
-def execute(sql):
-    cursor = connection.cursor()
-    try:
-        return cursor.execute(sql)
-    except Exception as exc:
-        print(f"An error occurred: {exc}")
+def execute(sql, params=None, fetch=False):
+    with connection.cursor() as cursor:
+        cursor.execute(sql, params)
+        if fetch:
+            return cursor.fetchall()
+        else:
+            connection.commit()
 
 def run_query(sql_query, params=None):
     with connection.cursor() as cursor:

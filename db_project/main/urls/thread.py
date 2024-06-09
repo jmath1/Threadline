@@ -1,5 +1,4 @@
 from django.urls import path
-
 from main.api import thread as api
 
 urlpatterns = [
@@ -19,8 +18,9 @@ urlpatterns = [
     
     # edit delete messages
     path("message/<int:message_id>/edit/", api.EditDeleteMessage.as_view()),
-    path("message/<int:message_id>/delete/", api.EditDeleteMessage.as_view()),
+    path("message/<int:message_id>/delete/", api.DeleteMessage.as_view()),
     path("message/<int:thread_id>/create/", api.CreateMessage.as_view()),
+    path("search/", api.ThreadSearchView.as_view()),
 
     # # add/remove members
     # path("<int:thread_id>/members/add/", api.AddThreadMember.as_view()),
