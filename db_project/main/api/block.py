@@ -1,12 +1,10 @@
 from django.http import JsonResponse
-from main.auth import LoginRequiredPermission
-from main.utils.utils import get_user_id, query_to_json
 from rest_framework.views import APIView
 
 
 # Blocks
 class GetBlockThreads(APIView):
-    permission_classes = [LoginRequiredPermission]
+    permission_classes = []
     
     def get(self, request, block_id):
         sql_query = f"""
@@ -16,19 +14,23 @@ class GetBlockThreads(APIView):
 
 
 class GetBlockFollows(APIView):
-    permission_classes = [LoginRequiredPermission]
+    permission_classes = []
     
     def get(self, request):
         # get blocks that the user follows
-        user_id = get_user_id(request)
-        sql_query = f"""
-            SELECT block_id FROM BlockFollow WHERE user_id = {user_id};
-        """
-        return JsonResponse(query_to_json(sql_query))
+        user_id = None
+        if request.user.is_authenticated:
+            
+            user_id = request.user
+            
+        if not user_id:
+            return JsonResponse({"error": "User not found"}, status=404)
+        else:
+            return request.user.objects.get_followed_blocks(user_id)
 
 class ListBlockMembers(APIView):
     def get(self, request, block_id):
         sql_query = f"""
-            SELECT * FROM Profile p WHERE p.block_id = {block_id} AND p.confirmed=true;
+            SELECT * FROM User p WHERE p.block_id = {block_id} AND p.confirmed=true;
         """
         return JsonResponse(query_to_json(sql_query))

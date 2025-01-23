@@ -13,7 +13,6 @@ import logging
 import os
 from pathlib import Path
 
-import psycopg2
 
 logger = logging.getLogger(__name__)
 
@@ -33,17 +32,16 @@ DEBUG = True
 ALLOWED_HOSTS = ["0.0.0.0"]
 
 
-AUTH_USER_MODEL = 'main.Profile'
+AUTH_USER_MODEL = 'main.User'
 
 AUTHENTICATION_BACKENDS = [
-    'main.auth.CustomSQLAuthBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 INSTALLED_APPS = [
-   # "django.contrib.admin",
+    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -55,6 +53,7 @@ INSTALLED_APPS = [
     "crispy_forms",
     "crispy_bootstrap4",
     "rest_framework",
+    "rest_framework_gis",
 ]
 
 MIDDLEWARE = [
@@ -106,7 +105,7 @@ DATABASES = {
         'NAME': 'project1',
         'USER': 'myuser',
         'PASSWORD': 'mypassword',
-        'HOST': '0.0.0.0',
+        'HOST': 'postgres',
         'PORT': '5432',
         'MIGRATE': True,    
         'TEST': {
@@ -165,10 +164,16 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-TEST_RUNNER = 'main.utils.test_runners.TestRunner'
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': []
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
 }
 
 JWT_EXPIRATION_TIME = 60000 # 10 minutes
+
+TEST_RUNNER = 'main.runners.GISDataTestRunner'

@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
@@ -15,21 +15,21 @@ services:
       - "5432:5432"
     volumes:
       - ${PWD}/docker/volumes/postgres:/var/lib/postgresql/data
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: ../docker/front.Dockerfile
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-    command: npm run start
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: ../docker/front.Dockerfile
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./frontend:/app
+  #   command: npm run start
 
   backend:
     build:
       context: ./db_project
       dockerfile: ../docker/back.Dockerfile
-    command: python manage.py runserver 0.0.0.0:8000
+    command: sleep 10000 #python manage.py runserver 0.0.0.0:8000
     volumes:
       - ./db_project:/app
       - ./venv/lib/python3.11/site-packages:/usr/local/lib/python3.11/site-packages
@@ -41,4 +41,3 @@ services:
       DATABASE_URL: postgres://myuser:mypassword@db:5432/project1
     env_file:
       - .env
-

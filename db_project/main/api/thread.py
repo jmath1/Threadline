@@ -1,65 +1,30 @@
 from django.http import HttpResponse, JsonResponse
-from main.api.general import CustomAPIView
-from main.auth import LoginRequiredPermission
-from main.utils.utils import (execute, get_cords_from_address, query_to_json,
-                              validate_coords)
-from rest_framework.views import APIView
 
 
-class GetThread(CustomAPIView):
-    permission_classes = [LoginRequiredPermission]
+from rest_framework.generics import GenericAPIView
+from main.models import Thread, Message
+from django.db.models import Count
+from django.db.models import Q
+
+class GetThread(GenericAPIView):
+    permission_classes = []
     
     def get(self, request, thread_id):
-        sql_query = f"""
-           SELECT message_id, body, datetime, ST_X(coords::geometry) AS longitude, ST_Y(coords::geometry) AS latitude FROM Message WHERE thread_id = {thread_id} ORDER BY datetime; 
-        """
-    
-        messages = query_to_json(sql_query)
-        sql_query = f"""
-            SELECT t.title, count(message_id) AS message_count 
-            FROM Thread t LEFT JOIN Message m on t.thread_id = m.thread_id JOIN Profile p ON t.author_user_id = p.user_id
-            WHERE t.thread_id = {thread_id} GROUP BY t.thread_id;
-        """
+
+        messages = Message.objects.filter(thread_id=thread_id).values("message_id", "body", "datetime", "coords")
         
-        data = query_to_json(sql_query)
+        thread = Thread.objects.get(thread_id=thread_id).annotate(message_count=Count("message_id"))
+        
+        
         print(messages)
-        return JsonResponse({"results": {"title": data[0]["title"], "message_count": data[0]["message_count"], "messages": messages}})
+        return JsonResponse({"results": {"thread": thread, "messages": messages}})
 
-class GetUserThreads(CustomAPIView):
-    permission_classes = [LoginRequiredPermission]
-    
-    def get(self, request):
-        user_id = self.get_user()["user_id"]
-        sql_query = f"""
-            SELECT thread_id, t.datetime AS created, title, p.username AS author_username
-            FROM Thread t 
-            JOIN Profile p ON t.author_user_id = p.user_id 
-            WHERE p.user_id = {user_id} OR author_user_id = {user_id} ORDER BY created DESC;
-        """
-        
-        data = query_to_json(sql_query)
-        if request.query_params.get("following") == "true":
-            sql_query = f"""
-                SELECT t.datetime AS created, title, p.username AS author_username
-                FROM Thread t 
-                JOIN Profile p ON t.author_user_id = p.user_id 
-                JOIN Friendship f ON f.followee_id = {user_id} 
-                UNION 
-                SELECT t.datetime AS created, title, p.username AS author_username
-                FROM Thread t 
-                JOIN Profile p ON t.author_user_id = p.user_id 
-                WHERE p.user_id = {user_id} OR author_user_id = {user_id} ORDER BY created DESC;
-            """
-            follow_data = query_to_json(sql_query)
-            if follow_data:
-                data = data + follow_data
-                data = sorted(data, key=lambda x: x["created"], reverse=True)
-
-        return JsonResponse({"results": data})
+class GetUserThreads(GenericAPIView):
+    def get_queryset(self, request):
+        return Thread.objects.filter(Q(user_id=request.user) | Q(author_user_id=request.user))
 
 
-class CreateThread(CustomAPIView):
-    permission_classes = [LoginRequiredPermission]
+class CreateThread(GenericAPIView):
     
     def post(self, request):
         data = request.data
@@ -86,7 +51,7 @@ class CreateThread(CustomAPIView):
             friendship_ids = []
             friendship_ids_sql_query = f"""
                 SELECT p.user_id
-                FROM Profile p
+                FROM User p
                 JOIN Friendship f ON p.user_id = f.followee_id
                 WHERE f.follower_id = {user_id} OR f.followee_id = {user_id} AND f.confirmed=true;
             """
@@ -134,201 +99,176 @@ class CreateThread(CustomAPIView):
         return HttpResponse(status=201)
     
     
-class GetBlockThreads(CustomAPIView):
-    permission_classes = [LoginRequiredPermission]
+# class GetBlockThreads(GenericAPIView):
     
-    def get(self, request):
-        block_id = self.get_user()["block_id"]
-        user_id = self.get_user()["user_id"]
-        sql_query = f"""
-            SELECT t.thread_id, t.datetime AS created, t.title, p.username AS author_username FROM Thread t JOIN Profile p ON t.author_user_id = p.user_id WHERE t.block_id = {block_id} AND t.user_id = {user_id} ORDER BY t.datetime DESC;
-        """
-        data = query_to_json(sql_query)
-        if request.query_params.get("following") == "true":
-            sql_query = f"""
-                SELECT t.datetime, t.thread_id, t.title, p.username AS author_username
-                FROM Thread t
-                JOIN Profile p ON t.author_user_id = p.user_id
-                JOIN Block b ON t.block_id = b.block_id
-                JOIN UserFollowBlock fb ON fb.block_id = b.block_id
-                WHERE fb.user_id = {user_id};
-            """
-            follow_data = query_to_json(sql_query)
+#     def get(self, request):
+#         block_id = self.get_user()["block_id"]
+#         user_id = self.get_user()["user_id"]
+#         sql_query = f"""
+#             SELECT t.thread_id, t.datetime AS created, t.title, p.username AS author_username FROM Thread t JOIN User p ON t.author_user_id = p.user_id WHERE t.block_id = {block_id} AND t.user_id = {user_id} ORDER BY t.datetime DESC;
+#         """
+#         data = query_to_json(sql_query)
+#         if request.query_params.get("following") == "true":
+#             sql_query = f"""
+#                 SELECT t.datetime, t.thread_id, t.title, p.username AS author_username
+#                 FROM Thread t
+#                 JOIN User p ON t.author_user_id = p.user_id
+#                 JOIN Block b ON t.block_id = b.block_id
+#                 JOIN UserFollowBlock fb ON fb.block_id = b.block_id
+#                 WHERE fb.user_id = {user_id};
+#             """
+#             follow_data = query_to_json(sql_query)
         
-            if follow_data:
-                data = data + follow_data
-                # doing this to bypass issue of timezones naivity when sorting on created in a query
-                data = sorted(data, key=lambda x: x["created"], reverse=True)
+#             if follow_data:
+#                 data = data + follow_data
+#                 # doing this to bypass issue of timezones naivity when sorting on created in a query
+#                 data = sorted(data, key=lambda x: x["created"], reverse=True)
 
-        return JsonResponse({"results": data})
+#         return JsonResponse({"results": data})
 
-class GetHoodThreads(CustomAPIView):
-    permission_classes = [LoginRequiredPermission]
+class GetHoodThreads(GenericAPIView):
     
     def get(self, request):
         user = self.get_user()
         hood_id = user["hood_id"]
         user_id = user["user_id"]
-        sql_query = f"""SELECT t.thread_id, t.datetime AS created, t.thread_id, t.title, p.username AS author_username FROM Thread t JOIN Profile p on p.user_id=t.author_user_id WHERE hood_id = {hood_id} ORDER BY t.datetime DESC"""
-        data = query_to_json(sql_query) 
-        
-        if request.query_params.get("following") == "true":
-            sql_query = f"""
-                SELECT t.datetime AS created, t.thread_id, t.title, p.username as author_username
-                FROM Thread t
-                JOIN Profile p ON t.author_user_id = p.user_id
-                JOIN Hood h ON t.hood_id = h.hood_id
-                JOIN UserFollowHood fh ON fh.hood_id = h.hood_id
-                WHERE fh.user_id = {user_id}
-            """
-            follow_data = query_to_json(sql_query)
 
-            if follow_data:
-                data = follow_data + data
-                data = sorted(data, key=lambda x: x["created"], reverse=True)
+        if request.query_params.get("following") == "true":
+            
+            data = Thread.objects.filter(Q(hood_id=hood_id) | Q(hood_folow=request.user)).values("thread_id", "datetime", "title", "author_user_id").sort('created')
+
+        else:
+            data = Thread.objects.filter(hood_id=hood_id).values("thread_id", "datetime", "title", "author_user_id").sort('created')
         return JsonResponse({"results": data})
         
     
 
-class DeleteThread(APIView):
-    permission_classes = [LoginRequiredPermission]
+class DeleteThread(GenericAPIView):
     
-    def delete(self, request, thread_id):
-        sql_query = f"""
-            DELETE FROM Thread WHERE thread_id = {thread_id};
-        """
-        execute(sql_query)
-        return JsonResponse(status=204)
+    def get_queryset(self, request):
+        return Thread.objects.filter(request.user)
 
 
-class FollowThread(CustomAPIView):
-    permission_classes = [LoginRequiredPermission]
+# class FollowThread(GenericAPIView):
     
-    def post(self, request, thread_id):
-        user_id = self.get_user()["user_id"]
-        sql_query = f"""
-            INSERT INTO ThreadFollow (user_id, thread_id)
-            VALUES ({user_id}, {thread_id})
-            RETURNING;
-        """
-        execute(sql_query)
-        return JsonResponse(status=201)
+#     def post(self, request, thread_id):
+#         user_id = self.get_user()["user_id"]
+#         sql_query = f"""
+#             INSERT INTO ThreadFollow (user_id, thread_id)
+#             VALUES ({user_id}, {thread_id})
+#             RETURNING;
+#         """
+#         execute(sql_query)
+#         return JsonResponse(status=201)
 
-class UnfollowThread(CustomAPIView):
-    permission_classes = [LoginRequiredPermission]
+# class UnfollowThread(GenericAPIView):
     
-    def delete(self, request, thread_id):
-        user_id = self.get_user()["user_id"]
-        sql_query = f"""
-            DELETE FROM ThreadFollow WHERE user_id={user_id} AND thread_id={thread_id};
-        """
-        execute(sql_query)
-        return JsonResponse(status=204)
+#     def delete(self, request, thread_id):
+#         user_id = self.get_user()["user_id"]
+#         sql_query = f"""
+#             DELETE FROM ThreadFollow WHERE user_id={user_id} AND thread_id={thread_id};
+#         """
+#         execute(sql_query)
+#         return JsonResponse(status=204)
 
-class ListThreadMembers(APIView):
-    permission_classes = [LoginRequiredPermission]
+# class ListThreadMembers(GenericAPIView):
     
-    def get(self, request, thread_id):
-        sql_query = f"""
-            SELECT p.username, p.user_id, p.firstname, p.lastname FROM Profile p
-            JOIN UserThread ut ON p.user_id = ut.user_id
-            WHERE ut.thread_id = {thread_id};
-        """
-        return JsonResponse(query_to_json(sql_query))
+#     def get(self, request, thread_id):
+#         sql_query = f"""
+#             SELECT p.username, p.user_id, p.firstname, p.lastname FROM User p
+#             JOIN UserThread ut ON p.user_id = ut.user_id
+#             WHERE ut.thread_id = {thread_id};
+#         """
+#         return JsonResponse(query_to_json(sql_query))
 
-class ListThreadMessages(APIView):
-    permission_classes = [LoginRequiredPermission]
+# class ListThreadMessages(GenericAPIView):
     
-    def get(self, request, thread_id):
-        sql_query = f"""
-            SELECT * FROM Message m JOIN Profile p ON m.user_id = p.user_id WHERE m.thread_id = {thread_id};
-        """
-        return JsonResponse(query_to_json(sql_query))
+#     def get(self, request, thread_id):
+#         sql_query = f"""
+#             SELECT * FROM Message m JOIN User p ON m.user_id = p.user_id WHERE m.thread_id = {thread_id};
+#         """
+#         return JsonResponse(query_to_json(sql_query))
     
-class EditDeleteMessage(APIView):
-    permission_classes = [LoginRequiredPermission]
+# class EditDeleteMessage(GenericAPIView):
     
-    def post(self, request, message_id):
-        sql_query = f"""
-            UPDATE Message
-            SET content = {request.data["content"]}
-            WHERE message_id = {message_id};
-        """
-        execute(sql_query)
-        return JsonResponse(status=201)
+#     def post(self, request, message_id):
+#         sql_query = f"""
+#             UPDATE Message
+#             SET content = {request.data["content"]}
+#             WHERE message_id = {message_id};
+#         """
+#         execute(sql_query)
+#         return JsonResponse(status=201)
     
-    def delete(self, request, message_id):
-        sql_query = f"""
-            DELETE FROM Message WHERE message_id = {message_id};
-        """
-        execute(sql_query)
-        return JsonResponse(status=204)
+#     def delete(self, request, message_id):
+#         sql_query = f"""
+#             DELETE FROM Message WHERE message_id = {message_id};
+#         """
+#         execute(sql_query)
+#         return JsonResponse(status=204)
 
 
-class DeleteMessage(CustomAPIView):
-    permission_classes = [LoginRequiredPermission]
+# class DeleteMessage(GenericAPIView):
     
-    def delete(self, request, message_id):
-        sql_query = f"""
-            DELETE FROM Message WHERE message_id = {message_id};
-        """
-        execute(sql_query)
-        return JsonResponse(status=204, data={"message": "Message deleted successfully."})
+#     def delete(self, request, message_id):
+#         sql_query = f"""
+#             DELETE FROM Message WHERE message_id = {message_id};
+#         """
+#         execute(sql_query)
+#         return JsonResponse(status=204, data={"message": "Message deleted successfully."})
 
-class CreateMessage(CustomAPIView):
-    permission_classes = [LoginRequiredPermission]
+# class CreateMessage(GenericAPIView):
     
-    def post(self, request, thread_id):
-        user = self.get_user()
-        user_id = user["user_id"]
-        user_block = user["block_id"]
-        user_hood = user["block_id"]
-        address = request.data.get("address")
-        sql_query = "SELECT block_id, hood_id, user_id, author_user_id FROM Thread WHERE thread_id = %s;"        
-        params = (thread_id,)
+#     def post(self, request, thread_id):
+#         user = self.get_user()
+#         user_id = user["user_id"]
+#         user_block = user["block_id"]
+#         user_hood = user["block_id"]
+#         address = request.data.get("address")
+#         sql_query = "SELECT block_id, hood_id, user_id, author_user_id FROM Thread WHERE thread_id = %s;"        
+#         params = (thread_id,)
 
-        data = execute(sql_query, params=params, fetch=True)
-        if data:
-            thread_block = data[0][0]
-            thread_hood = data[0][1]
-            thread_user = data[0][2]
-            thread_author = data[0][3]
-        else:
-            return JsonResponse({"error": "Sorry,thread does not exist."}, status=404)
+#         data = execute(sql_query, params=params, fetch=True)
+#         if data:
+#             thread_block = data[0][0]
+#             thread_hood = data[0][1]
+#             thread_user = data[0][2]
+#             thread_author = data[0][3]
+#         else:
+#             return JsonResponse({"error": "Sorry,thread does not exist."}, status=404)
 
         
-        # # Check user permission
-        # if (thread_block and user_block != thread_block) or (thread_hood and user_hood != thread_hood) \
-        #     or ((thread_user and user_id != thread_user) and (user_id != thread_author)):
-        #         return JsonResponse({"error": "Sorry, no write access allowed."}, status=403)
+#         # # Check user permission
+#         # if (thread_block and user_block != thread_block) or (thread_hood and user_hood != thread_hood) \
+#         #     or ((thread_user and user_id != thread_user) and (user_id != thread_author)):
+#         #         return JsonResponse({"error": "Sorry, no write access allowed."}, status=403)
 
-        # geocode the address
-        if address:
-            longitude, latitude = get_cords_from_address(address)
+#         # geocode the address
+#         if address:
+#             longitude, latitude = get_cords_from_address(address)
      
-        sql_query = "INSERT INTO Message (thread_id, user_id, body, coords) VALUES (%s, %s, %s, ST_SetSRID(ST_MakePoint(%s, %s), 4326));"
-        params = (thread_id,user_id, request.data["body"], longitude, latitude)
-        execute(sql_query, params=params)
-        return JsonResponse(status=201, data={"message": "Message created successfully."}) 
+#         sql_query = "INSERT INTO Message (thread_id, user_id, body, coords) VALUES (%s, %s, %s, ST_SetSRID(ST_MakePoint(%s, %s), 4326));"
+#         params = (thread_id,user_id, request.data["body"], longitude, latitude)
+#         execute(sql_query, params=params)
+#         return JsonResponse(status=201, data={"message": "Message created successfully."}) 
         
 
-class ThreadSearchView(CustomAPIView):
-    permission_classes = [LoginRequiredPermission]
+# class ThreadSearchView(GenericAPIView):
 
-    def get(self, request, *args, **kwargs):
-        query = request.GET.get('q', '')
+#     def get(self, request, *args, **kwargs):
+#         query = request.GET.get('q', '')
 
-        if query:
-            # Use raw SQL to filter threads
-            sql_query = sql_query = f"""
-                SELECT * FROM Thread t JOIN Profile p ON t.author_user_id = p.user_id
-                WHERE title ILIKE '%{query}%'
-                AND (t.user_id IS NULL OR t.author_user_id = {self.get_user()['user_id']} OR t.user_id = {self.get_user()['user_id']})
-                """
+#         if query:
+#             # Use raw SQL to filter threads
+#             sql_query = sql_query = f"""
+#                 SELECT * FROM Thread t JOIN User p ON t.author_user_id = p.user_id
+#                 WHERE title ILIKE '%{query}%'
+#                 AND (t.user_id IS NULL OR t.author_user_id = {self.get_user()['user_id']} OR t.user_id = {self.get_user()['user_id']})
+#                 """
 
-            data = query_to_json(sql_query)
+#             data = query_to_json(sql_query)
             
-        else:
-            data = []
+#         else:
+#             data = []
 
-        return JsonResponse(status=200, data={'results': data})
+#         return JsonResponse(status=200, data={'results': data})
