@@ -1,7 +1,8 @@
 from django.urls import path
-from main import api
+from main.api.notification import (MarkNotificationReadAPIView,
+                                   NotificationListAPIView)
 
 urlpatterns = [
-#     path("view/", api.GetNotifications.as_view()),
-#     path("mark_read/", api.MarkNotificationsRead.as_view()),   
+    path("", NotificationListAPIView.as_view()),
+    path("<int:pk>/read/", MarkNotificationReadAPIView.as_view()),
 ]

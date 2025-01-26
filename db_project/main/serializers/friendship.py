@@ -1,7 +1,8 @@
-from rest_framework import serializers
-from main.models import Friendship, User
-from main.constants import FRIEND_REQUEST_STATUS_CHOICES
 from django.shortcuts import get_object_or_404
+from main.constants import FRIEND_REQUEST_STATUS_CHOICES
+from main.models import Friendship, User
+from rest_framework import serializers
+
 
 class FriendshipRequestSerializer(serializers.ModelSerializer):
     from_user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())

@@ -16,18 +16,39 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from drf_yasg import openapi
+from drf_yasg.views import get_schema_view
+from rest_framework import permissions
+from rest_framework_simplejwt.views import (TokenObtainPairView,
+                                            TokenRefreshView)
+
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Neighbors API",
+        default_version='v1',
+        description="API documentation",
+        terms_of_service="https://www.google.com/policies/terms/",
+        contact=openapi.Contact(email=""),
+        license=openapi.License(name="BSD License"),
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+)
 
 urlpatterns = [ 
+    path('api/v1/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path("api/v1/hood/", include("main.urls.hood")),
+    path("api/v1/follow/", include("main.urls.follow")),
+    path("api/v1/user/", include("main.urls.user")),
+    path("api/v1/thread/", include("main.urls.thread")),
+    path("api/v1/notifications/", include("main.urls.notifications")),
+    path("api/v1/friendship/", include("main.urls.friendships")),
+    path("accounts/", admin.site.urls),
 
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path("hood/", include("main.urls.hood")),
-    #path("block/", include("main.urls.block")), 
-    path("follow/", include("main.urls.follow")),
-    path("user/", include("main.urls.user")),
-    path("thread/", include("main.urls.thread")),
-    path("notifications/", include("main.urls.notifications")),
-    path("friendship/", include("main.urls.friendships")),
-    path("admin/", admin.site.urls),
+    # Swagger documentation URLs
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+
+    #path('schema/', schema_view.without_ui(cache_timeout=0), name='openapi-schema'),
 ]

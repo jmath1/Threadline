@@ -1,11 +1,12 @@
 # Create your models here.
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
+from django.contrib.auth.models import (AbstractBaseUser, PermissionsMixin,
+                                        UserManager)
 from django.contrib.gis.db import models as gis_models
 from django.db import models
+from main.constants import (FRIEND_REQUEST_STATUS_CHOICES,
+                            NOTIFICATION_STATUSES, NOTIFICATION_TYPES,
+                            THREAD_TYPES)
 
-from main.managers.friendship import FriendshipManager
-from django.contrib.auth.models import UserManager
-from main.constants import NOTIFICATION_TYPES, FRIEND_REQUEST_STATUS_CHOICES
 
 class Hood(models.Model):
     name = models.CharField(max_length=50, unique=True)
@@ -16,15 +17,10 @@ class Hood(models.Model):
 
     def get_member_count(self):
         return self.user_set.count()
-        
-# class Block(models.Model):
-#     hood = models.ForeignKey(Hood, on_delete=models.CASCADE)
-#     description = models.TextField()
-#     name = models.CharField(max_length=100, unique=True)
-#     polygon = gis_models.MultiPolygonField()
     
-#     objects = BlockManager()
-
+    @property
+    def member_count(self):
+        return self.get_member_count()
 
 class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=50, unique=True)
@@ -37,9 +33,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     coords = gis_models.PointField(geography=True, srid=4326)
     location_confirmed = models.BooleanField(default=False)
     address = models.CharField(max_length=255)
-    #block_id = models.ForeignKey(Block, on_delete=models.SET_NULL, null=True)
     hood = models.ForeignKey(Hood, on_delete=models.SET_NULL, null=True)
-    #block_follow = models.ManyToManyField(Block, through='UserFollowBlock', related_name='block_follow')
     hood_follow = models.ManyToManyField(Hood, through='UserFollowHood', related_name='hood_follow')
     friends = models.ManyToManyField('self', through='Friendship', symmetrical=True)
 
@@ -71,6 +65,9 @@ class User(AbstractBaseUser, PermissionsMixin):
         hood_id = User.objects.get(user_id=self.user_id).only("hood_id")
 
         return hood_id
+
+    def __str__(self):
+        return f"User {self.pk} self.username"
 
     def confirm_location(self, hood) -> bool:
         confirmed = False
@@ -123,6 +120,9 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def get_following(self):
         return User.objects.filter(followers__follower=self)
+    
+    def get_hoods_followed(self):
+        return self.hood_follow.all()
 
 
 class UserHoodApproval(models.Model):
@@ -132,13 +132,10 @@ class UserHoodApproval(models.Model):
 
     class Meta:
         unique_together = (('hood_id', 'user_id', 'approver_id'),)
+        
+    def __str__(self):
+        return f"{self.approver_id.username} approved {self.user_id.username} for {self.hood_id.name}"
 
-# class UserFollowBlock(models.Model):
-#     block = models.ForeignKey(Block, on_delete=models.CASCADE)
-#     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    
-#     class Meta:
-#         unique_together = (('block_id', 'user_id'),)
 
 class UserFollowHood(models.Model):
     hood = models.ForeignKey(Hood, on_delete=models.CASCADE)
@@ -146,13 +143,16 @@ class UserFollowHood(models.Model):
     
     class Meta:
         unique_together = (('hood_id', 'user_id'),)
+        
+    def __str__(self):
+        return f"{self.user.username} follows {self.hood.name}"
 
 
 class Friendship(models.Model):
 
     from_user = models.ForeignKey(User, related_name='friend_requests_sent', on_delete=models.CASCADE)
     to_user = models.ForeignKey(User, related_name='friend_requests_received', on_delete=models.CASCADE)
-    status = models.CharField(max_length=10, choices=FRIEND_REQUEST_STATUS_CHOICES, default='requested')
+    status = models.CharField(max_length=10, choices=FRIEND_REQUEST_STATUS_CHOICES, default='REQUESTED')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -184,36 +184,65 @@ class Follow(models.Model):
         indexes = [
             models.Index(fields=['follower', 'followee']),
         ]
-
+        
+    def __str__(self):
+        return f"{self.follower.username} -> {self.followee.username}"
 
 class Thread(models.Model):
-    title = models.CharField(max_length=255)
-    # block = models.ForeignKey(Block,  on_delete=models.CASCADE, null=True)
-    hood = models.ForeignKey(Hood, on_delete=models.CASCADE, null=True)
-    user = models.ManyToManyRel(to=User, field='id', through='UserThread')
+    name = models.CharField(max_length=100, blank=True, null=True)
+    type = models.CharField(max_length=10, choices=THREAD_TYPES)
+    hood = models.ForeignKey(
+        Hood,
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        related_name='threads'
+    )
+    participants = models.ManyToManyField(
+        User,
+        related_name='threads',
+        blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='created_threads'
+    )
 
-    class Meta:
-        db_table = 'Thread'
-
-class UserThread(models.Model):
-    thread = models.ForeignKey(Thread, on_delete=models.CASCADE)
-    # this is a thread where a user might not necessarily be the author, but they are tagged.
-    user_id = models.IntegerField()
-
-    class Meta:
-        unique_together = (('thread_id', 'user_id'),)
+    def __str__(self):
+        return self.name if self.name else f"{self.type} thread"
 
 class Message(models.Model):
-    thread = models.ForeignKey(Thread, on_delete=models.CASCADE)
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
-    coords = gis_models.PointField(geography=True, srid=4326)
-    body = models.TextField()
-    datetime = models.DateTimeField(default=models.functions.Now())
+    thread = models.ForeignKey(
+        Thread,
+        on_delete=models.CASCADE,
+        related_name='messages'
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='sent_messages'
+    )
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    tags = models.ManyToManyField(
+        User,
+        related_name='tagged_messages',
+        blank=True
+    )
+
+    def __str__(self):
+        return f"Message by {self.author.username} in {self.thread}"
 
 class UserAccess(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     thread = models.ForeignKey(Thread, on_delete=models.CASCADE)
     datetime = models.DateTimeField(default=models.functions.Now())
+    
+    def __str__(self):
+        return f"User {self.user.username} accessed thread {self.thread.name}"
 
 class Notification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user')    
@@ -223,3 +252,14 @@ class Notification(models.Model):
     follow = models.ForeignKey(Follow, on_delete=models.CASCADE, null=True)
     datetime = models.DateTimeField(default=models.functions.Now())
     type = models.CharField(max_length=50, choices=NOTIFICATION_TYPES)
+    status = models.CharField(max_length=50, choices=NOTIFICATION_STATUSES, default="UNREAD")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    class Meta:
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['status']),
+        ]
+        
+    def __str__(self):
+        return f"Notification for {self.user.username} - {self.type}"

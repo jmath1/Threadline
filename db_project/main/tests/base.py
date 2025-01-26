@@ -1,7 +1,8 @@
-from django.test import TestCase
-from django.test import Client
-from main.models import User
 from unittest.mock import patch
+
+from django.test import Client, TestCase
+from main.models import User
+
 
 class BaseTestCase(TestCase):
     token = None
@@ -32,7 +33,7 @@ class BaseTestCase(TestCase):
         if self.token:
             if params:
                 return self.client.post(url, params=params, data=data, headers={"Authorization": f"Bearer {self.token}"})
-            return self.client.post(url, params=params, data=data, headers={"Authorization": f"Bearer {self.token}"})
+            return self.client.post(url, data=data, headers={"Authorization": f"Bearer {self.token}"})
             
         return self.client.post(url, params=params, data=data)
     
@@ -40,12 +41,12 @@ class BaseTestCase(TestCase):
         if self.token:
             if params:
                 return self.client.put(url, params=params, data=data, headers={"Authorization": f"Bearer {self.token}"})
-            return self.client.put(url, params=params, data=data, headers={"Authorization": f"Bearer {self.token}"})
+            return self.client.put(url, data=data, headers={"Authorization": f"Bearer {self.token}"})
             
         return self.client.put(url, params=params, data=data)
     
-    def delete(self, url, params=None, data=None, auth=False):
-        return self.client.delete(url, params=params, headers={"Authorization": f"Bearer {self.token}"})
+    def delete(self, url):
+        return self.client.delete(url, headers={"Authorization": f"Bearer {self.token}"})
 
     def register_user(
         self, 
@@ -67,7 +68,7 @@ class BaseTestCase(TestCase):
             'description': description,
             'address': address,
         }
-        res = self.post('/user/register/', data=data)
+        res = self.post('/api/v1/user/register/', data=data)
         if res.status_code == 201:
             self.token = res.json()["tokens"]["access"]
         else:
@@ -76,7 +77,10 @@ class BaseTestCase(TestCase):
         return user
 
     def login_user(self, username="newuser", password="password"):
-        res = self.post("/api/token/", data={"username": username, "password": password})
-        self.token = res.json()["access"]
+        res = self.post("/api/v1/token/", data={"username": username, "password": password})
+        if res.status_code == 200:
+            self.token = res.json()["access"]
+        else:
+            raise Exception("Login failed")
         return res
     

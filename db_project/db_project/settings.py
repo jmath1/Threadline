@@ -13,7 +13,6 @@ import logging
 import os
 from pathlib import Path
 
-
 logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -54,6 +53,7 @@ INSTALLED_APPS = [
     "crispy_bootstrap4",
     "rest_framework",
     "rest_framework_gis",
+    "drf_yasg",
 ]
 
 MIDDLEWARE = [

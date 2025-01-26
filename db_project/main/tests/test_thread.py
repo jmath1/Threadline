@@ -1,0 +1,148 @@
+from django.contrib.gis.geos import Point
+from main.factories import ThreadFactory, UserFactory
+from main.models import Hood, Thread
+from main.tests.base import BaseTestCase
+
+
+class GetThreadTest(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        # Set up user and neighborhood
+        self.mock_geocode_address.return_value = Point(-75.1764407, 39.9404423, srid=4326)
+        self.user = UserFactory(username="user1", email="user1@test.com")
+        self.hood = Hood.objects.get(id=1)
+        self.user.hood = self.hood
+        self.other_hood = Hood.objects.get(id=2)
+        self.user.save()
+
+    def test_get_hood_thread_allowed(self):
+        allowed_hood_thread = ThreadFactory(name="Allowed", hood=self.hood, type="HOOD")
+        self.login_user(username="user1", password="password")
+        response = self.get(f"/api/v1/thread/{allowed_hood_thread.id}/", auth=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["name"], "Allowed")
+            
+    def test_get_hood_thread_not_allowed(self):
+        not_allowed_hood_thread = ThreadFactory(name="Not Allowed", hood=self.other_hood, type="HOOD")
+        self.login_user(username="user1", password="password")
+        response = self.get(f"/api/v1/thread/{not_allowed_hood_thread.id}/", auth=True)
+        self.assertEqual(response.status_code, 403)
+        
+    def test_get_public_thread(self):
+        public_thread = ThreadFactory(name="Public", hood=self.hood, type="PUBLIC")
+
+        self.login_user(username="user1", password="password")
+        response = self.get(f"/api/v1/thread/{public_thread.id}/", auth=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["name"], "Public")
+            
+    def test_get_private_thread_participant(self):
+        # Create threads in a different neighborhood
+        allowed_private_thread = ThreadFactory(name="Allowed Private", hood=self.hood, type="PRIVATE")
+        # Add users to the private thread
+        allowed_private_thread.participants.add(self.user)
+        
+        self.login_user(username="user1", password="password")
+        response = self.get(f"/api/v1/thread/{allowed_private_thread.id}/", auth=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["name"], "Allowed Private")
+            
+    def test_get_private_thread_not_participant(self):
+        not_allowed_private_thread = ThreadFactory(name="Not Allowed Private", type="PRIVATE")
+        self.login_user(username="user1", password="password")
+        response = self.get(f"/api/v1/thread/{not_allowed_private_thread.id}/", auth=True)
+
+        self.assertEqual(response.status_code, 403)
+
+class CreateThreadTest(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        # Set up user and neighborhood
+        self.mock_geocode_address.return_value = Point(-75.1764407, 39.9404423, srid=4326)
+        self.user = UserFactory(username="user1", email="test@gmail.com")
+        UserFactory(username="user2", email="test2@gmail.com")
+        self.hood = Hood.objects.get(id=1)
+    
+    def test_create_hood_thread(self):
+        self.login_user(username="user1", password="password")
+        data = {
+            "name": "Test Thread",
+            "type": "HOOD",
+            "hood": self.hood.id,
+            "content": "Test Content"
+        }
+        response = self.post("/api/v1/thread/", data=data)
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Thread.objects.count(), 1)
+        self.assertEqual(Thread.objects.get().name, "Test Thread")
+        self.assertEqual(Thread.objects.get().type, "HOOD")
+        self.assertEqual(Thread.objects.get().hood, self.hood)
+        self.assertEqual(Thread.objects.get().author, self.user)
+        self.assertEqual(Thread.objects.get().messages.all().count(), 1)
+        self.assertEqual(Thread.objects.get().messages.all()[0].author, self.user)
+        self.assertEqual(Thread.objects.get().messages.all()[0].content, "Test Content")
+    
+    def test_create_public_thread(self):
+        self.login_user(username="user1", password="password")
+        data = {
+            "name": "Test Thread",
+            "type": "PUBLIC",
+            "content": "Test Content"
+        }
+        response = self.post("/api/v1/thread/", data=data)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Thread.objects.count(), 1)
+        self.assertEqual(Thread.objects.get().name, "Test Thread")
+        self.assertEqual(Thread.objects.get().type, "PUBLIC")
+        self.assertEqual(Thread.objects.get().author, self.user)
+        self.assertEqual(Thread.objects.get().hood, None)
+        self.assertEqual(Thread.objects.get().messages.all().count(), 1)
+        self.assertEqual(Thread.objects.get().messages.all()[0].author, self.user)
+        self.assertEqual(Thread.objects.get().messages.all()[0].content, "Test Content")
+        
+    def test_thread_private(self):
+        self.login_user(username="user1", password="password")
+        data = {
+            "name": "Test Thread",
+            "type": "PRIVATE",
+            "content": "Test Content @user2"
+        }
+        response = self.post("/api/v1/thread/", data=data)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Thread.objects.count(), 1)
+        self.assertEqual(Thread.objects.get().name, "Test Thread")
+        self.assertEqual(Thread.objects.get().type, "PRIVATE")
+        self.assertEqual(Thread.objects.get().author, self.user)
+        self.assertEqual(Thread.objects.get().participants.all().count(), 2)
+  
+class DeleteThreadTest(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        # Set up user and neighborhood
+        self.mock_geocode_address.return_value = Point(-75.1764407, 39.9404423, srid=4326)
+        self.user = UserFactory(username="user1", email="user1@gmail.com")
+        
+    def test_author_delete_thread(self):
+        thread = ThreadFactory(name="Test Thread", author=self.user)
+        self.login_user(username="user1", password="password")
+        res = self.delete(f"/api/v1/thread/{thread.id}/")
+        self.assertEqual(res.status_code, 204)
+        self.assertEqual(Thread.objects.count(), 0)
+        
+    def test_author_not_delete_thread(self):
+        thread = ThreadFactory(name="Test Thread")
+        self.login_user(username="user1", password="password")
+        res = self.delete(f"/api/v1/thread/{thread.id}/")
+        self.assertEqual(res.status_code, 403)
+        self.assertEqual(Thread.objects.count(), 1)
+        
+    def test_thread_not_found(self):
+        self.login_user(username="user1", password="password")
+        res = self.delete(f"/api/v1/thread/999/")
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(Thread.objects.count(), 0)
+        

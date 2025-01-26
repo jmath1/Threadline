@@ -1,7 +1,8 @@
-from main.tests.base import BaseTestCase
 from django.contrib.gis.geos import Point
-from main.models import Follow
 from django.urls import reverse
+from main.models import Follow
+from main.tests.base import BaseTestCase
+
 
 class TestFollow(BaseTestCase):
     def test_following(self):
@@ -18,19 +19,19 @@ class TestFollow(BaseTestCase):
         
         # Second user checks if they now have one follower
         self.login_user(username="newuser2", password="password2")
-        user_info = self.get(f"/user/me/", auth=True).json()
+        user_info = self.get(f"/api/v1/user/me/", auth=True).json()
         self.assertEqual(user_info.get('friends_count'), 0)
         self.assertEqual(user_info.get('followers_count'), 1)
         
         # Second user lists lists their followers
-        res = self.get("/follow/followers/", auth=True)
+        res = self.get("/api/v1/follow/followers/", auth=True)
         self.assertEqual(res.status_code, 200)
         self.assertEqual(len(res.json()), 1)
         self.assertEqual(res.json()[0]['username'], "newuser1")
         
         # First user unfollows the second user
         self.login_user(username="newuser1", password="password1")
-        res = self.post(f"/follow/unfollow/{user_2.pk}")
+        res = self.post(f"/api/v1/follow/unfollow/{user_2.pk}")
         self.assertEqual(res.status_code, 204)
         self.assertEqual(Follow.objects.count(), 0)
         

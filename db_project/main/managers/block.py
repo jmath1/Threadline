@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class BlockManager(models.Manager):
 
     def get_from_coords(self, coords):

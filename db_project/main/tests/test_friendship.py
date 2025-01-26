@@ -14,7 +14,7 @@ class TestFriendship(BaseTestCase):
     
     def test_send_friend_request(self):
         self.login_user(username="newuser1", password="password1")
-        url = "/friendship/requests/"
+        url = "/api/v1/friendship/requests/"
         res = self.post(url, data={"to_user": self.user_2.id})
         self.assertEqual(res.status_code, 201)
         self.assertEqual(Friendship.objects.count(), 1)
@@ -24,7 +24,7 @@ class TestFriendship(BaseTestCase):
         user_2 = User.objects.get(username="newuser2")
         Friendship.objects.create(from_user=user_1, to_user=user_2, status="REQUESTED")
         self.login_user(username="newuser2", password="password2")
-        url = f"/friendship/requests/"
+        url = f"/api/v1/friendship/requests/"
         res = self.get(url, auth=True)
         self.assertEqual(res.status_code, 200)
         self.assertEqual(len(res.json()), 1)
@@ -35,7 +35,7 @@ class TestFriendship(BaseTestCase):
         user_2 = User.objects.get(username="newuser2")
         friendship = Friendship.objects.create(from_user=user_1, to_user=user_2, status="REQUESTED")
         self.login_user(username="newuser2", password="password2")
-        url = f"/friendship/accept/{friendship.pk}/"
+        url = f"/api/v1/friendship/accept/{friendship.pk}/"
         res = self.post(url)
         self.assertEqual(res.status_code, 200)
         self.assertTrue(Friendship.objects.filter(to_user=user_2.pk, from_user=user_1.pk).exists())
@@ -46,7 +46,7 @@ class TestFriendship(BaseTestCase):
         user_2 = User.objects.get(username="newuser2")
         friendship = Friendship.objects.create(from_user=user_1, to_user=user_2, status="REQUESTED")
         self.login_user(username="newuser2", password="password2")
-        url = f"/friendship/reject/{friendship.pk}/"
+        url = f"/api/v1/friendship/reject/{friendship.pk}/"
         res = self.post(url)
         self.assertEqual(res.status_code, 200)
         self.assertTrue(Friendship.objects.filter(to_user=user_2.pk, from_user=user_1.pk).exists())
@@ -58,7 +58,7 @@ class TestFriendship(BaseTestCase):
         user_1 = User.objects.get(username="newuser1")
         user_2 = User.objects.get(username="newuser2")
         friendship = Friendship.objects.create(from_user=user_1, to_user=user_2, status="ACCEPTED")
-        url = f"/friendship/remove/{friendship.pk}/"
+        url = f"/api/v1/friendship/remove/{friendship.pk}/"
         res = self.delete(url)
         self.assertEqual(res.status_code, 204)
         self.assertFalse(Friendship.objects.filter(to_user=user_2, from_user=user_1).exists())

@@ -1,6 +1,9 @@
 from django.urls import path
+from main.api.friendship import (AcceptFriendRequestView,
+                                 ListCreateFriendRequestsView,
+                                 ListFriendshipView, RejectFriendRequestView,
+                                 RemoveFriendView)
 from rest_framework.routers import DefaultRouter
-from main.api.friendship import ListFriendshipView, RejectFriendRequestView, ListCreateFriendRequestsView, AcceptFriendRequestView, RemoveFriendView
 
 urlpatterns = [
     path("", ListFriendshipView.as_view(), name="friendship"),

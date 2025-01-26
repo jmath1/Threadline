@@ -1,5 +1,6 @@
 from django.urls import path
 from main.api.follow import FollowViewSet
+
 urlpatterns = [
     path("followers/", FollowViewSet.as_view({"get": "list_followers"}), name="followers"),
     path("following/", FollowViewSet.as_view({"get": "list_following"}), name="following"),

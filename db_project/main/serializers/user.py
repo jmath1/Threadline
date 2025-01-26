@@ -1,12 +1,13 @@
 import os
 
 import requests
+from django.contrib.gis.geos import Point
+from main.models import Hood, User
+from main.utils.utils import process_coords
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from main.models import Hood, User
-from django.contrib.gis.geos import Point
-
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
+
 
 class PointField(serializers.Field):
     def to_representation(self, value):
@@ -18,7 +19,6 @@ class PointField(serializers.Field):
 
 class UserSerializer(GeoFeatureModelSerializer):
     username = serializers.CharField(max_length=50)
-    password = serializers.CharField(max_length=30)
     first_name = serializers.RegexField(regex=r'^[a-zA-Z0-9]*$', max_length=50)
     last_name = serializers.RegexField(regex=r'^[a-zA-Z0-9]*$', max_length=50)
     email = serializers.CharField(max_length=25)
@@ -26,32 +26,34 @@ class UserSerializer(GeoFeatureModelSerializer):
     photo_url = serializers.CharField(max_length=255, required=False, allow_null=True)
     address = serializers.CharField(max_length=255)   
     coords = PointField(required=False)
-    
+    password = serializers.CharField(max_length=30, write_only=True)
     
     class Meta:
         model = User
         geo_field = "coords"
         fields = [
-            "username", "password", "first_name", "last_name", "email", "hood", "description", "photo_url", "address", "coords"
+            "username", "first_name", "last_name", "email", "password", "hood", "description", "photo_url", "address", "coords"
         ]
-    
-    def to_representation(self, instance):
-        """
-        Gets the coordinates from the address
-        """
-        hood, coords  = self.process_coords(instance.get("address"))
 
-        instance['hood'] = hood
-        instance['coords'] = coords
-
-        return instance
-
+class MeSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=50)
+    first_name = serializers.RegexField(regex=r'^[a-zA-Z0-9]*$', max_length=50)
+    last_name = serializers.RegexField(regex=r'^[a-zA-Z0-9]*$', max_length=50)
+    email = serializers.CharField(max_length=25)
+    description = serializers.CharField(max_length=255)
+    photo_url = serializers.CharField(max_length=255, required=False, allow_null=True)
+    address = serializers.CharField(max_length=255)   
+    coords = PointField(required=False)
+    hood = serializers.PrimaryKeyRelatedField(queryset=Hood.objects.all(), required=False)
+    followers_count = serializers.IntegerField()
+    following_count = serializers.IntegerField()
+    friends_count = serializers.IntegerField()
         
 class LoginSerializer(serializers.Serializer):
-    username = serializers.CharField( max_length=50)
-    password = serializers.CharField( max_length=30)
+    username = serializers.CharField(max_length=50)
+    password = serializers.CharField(max_length=30)
     
-class EditUserSerializer(UserSerializer):
+class EditUserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(max_length=50, required=False)
     password = serializers.CharField(max_length=30, required=False)
     first_name = serializers.RegexField(regex=r'^[a-zA-Z0-9]*$', max_length=50, required=False)
@@ -59,16 +61,25 @@ class EditUserSerializer(UserSerializer):
     email = serializers.CharField(max_length=25,required=False)
     description = serializers.CharField(required=False)
     photo_url = serializers.CharField(max_length=255, required=False, allow_null=True)
-    address = serializers.CharField(max_length=200, required=False)   
+    address = serializers.CharField(max_length=200, required=False)
     
-    def to_representation(self, instance):
-        """
-        Gets the coordinates from the address
-        """
-        if instance.get("coords"):
-            hood_id = self.process_coords()
-            instance['coords'] = f"({self.coords[0]} {self.coords[1]})"
-            instance['hood_id'] = hood_id
-            instance['location_confirmed'] = self.confirm_hood(hood_id)
-
+    class Meta:
+        model = User
+        fields = ["username", "password", "first_name", "last_name", "email", "description", "photo_url", "address"]
+        
+    def validate_address(self, value):
+        hood, coords = process_coords(value)
+        if not hood:
+            raise ValidationError("Hood not supported")
+        return value
+    
+    def update(self, instance, validated_data):
+        data = self.validated_data
+        if "address" in data:
+            hood, coords = process_coords(data["address"])
+            data["hood"] = hood
+            data["coords"] = coords
+        for key, value in data.items():
+            setattr(instance, key, value)
+        instance.save()
         return instance

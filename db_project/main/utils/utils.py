@@ -1,10 +1,12 @@
 import os
-import requests
 from typing import Tuple
+
+import requests
 from django.contrib.gis.geos import Point
 from main.models import Hood
 from rest_framework.exceptions import ValidationError
-    
+
+
 def geocode_address(self, address: str) -> Point:
     """
     Gets the latitude and longitude of an address. Returns None if the address is invalid

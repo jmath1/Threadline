@@ -1,29 +1,45 @@
-from rest_framework import viewsets, status
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-
+from drf_yasg.utils import swagger_auto_schema
 from main.models import User
-from main.serializers.follow import FollowSerializer, FollowerSerializer
+from main.serializers.follow import FollowerUserSerializer
+from main.serializers.general import EmptySerializer
+from rest_framework import status, viewsets
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
 
 class FollowViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    serializer_class = FollowSerializer
+    
+    def get_serializer_class(self):
+        if self.action == "list_followers" or self.action == "list_following":
+            return FollowerUserSerializer
+        return EmptySerializer
 
+    
+    @swagger_auto_schema(
+        operation_description="List all followers of the authenticated user",
+        responses={200: FollowerUserSerializer(many=True)},
+    )
     def list_followers(self, request):
-        """List all followers of the authenticated user."""
         followers = request.user.get_followers()
-        serializer = FollowerSerializer(followers, many=True)
+        serializer = FollowerUserSerializer(followers, many=True)
         return Response(serializer.data)
 
+    @swagger_auto_schema(
+        operation_description="List all users the authenticated user is following",
+        responses={200: FollowerUserSerializer(many=True)},
+    )
     def list_following(self, request):
-        """List all users the authenticated user is following."""
         following = request.user.get_following()
-        serializer = FollowerSerializer(following, many=True)
+        serializer = FollowerUserSerializer(following, many=True)
         return Response(serializer.data)
 
+    @swagger_auto_schema(
+        operation_description="Follow a user",
+        responses={201: "Started following."},
+    )
     def follow(self, request, followee_id):
-        """Follow a user."""
         if not followee_id:
             return Response({"error": "followee_id is required"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -31,8 +47,11 @@ class FollowViewSet(viewsets.ModelViewSet):
         request.user.follow(followee)
         return Response({"message": "Started following."}, status=status.HTTP_201_CREATED)
 
+    @swagger_auto_schema(
+        operation_description="Unfollow a user",
+        responses={204: "No Content"},
+    )
     def unfollow(self, request, followee_id):
-        """Unfollow a user."""
         followee = get_object_or_404(User, id=followee_id)
         request.user.unfollow(followee)
         return Response({"message": "Unfollowed."}, status=status.HTTP_204_NO_CONTENT)

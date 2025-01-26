@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from main.models import Friendship, Follow
-from main.models import Notification
+from main.models import Follow, Friendship, Notification
+
 
 @receiver(post_save, sender=Friendship)
 def notify_friend_request(sender, instance, created, **kwargs):
