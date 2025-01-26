@@ -29,7 +29,7 @@ services:
     build:
       context: ./db_project
       dockerfile: ../docker/back.Dockerfile
-    command: sleep 10000 #python manage.py runserver 0.0.0.0:8000
+    command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - ./db_project:/app
       - ./venv/lib/python3.11/site-packages:/usr/local/lib/python3.11/site-packages
