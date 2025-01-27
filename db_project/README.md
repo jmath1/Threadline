@@ -21,19 +21,20 @@ copy the .env.template file to .env and fill in the GOOGLE_API_KEY to get starte
 ### Backend
 
 1. **User Registration and Authentication**
+
    - [x] Implement registration functionality.
    - [x] Implement login functionality.
-   - [x] Change SQL authentication to DRF JWT authentication
+   - [x] Change legacy SQL authentication to DRF JWT authentication
+
 2. **Profile Management**
 
    - [x] Create functionality for creating and editing profiles.
-   - [x] Ensure SQL queries are used for profile management.
+   - [x] Remove legacy SQL queries and implement Django ORM
 
 3. **Communication and Interaction**
 
    - [x] Implement posting messages functionality.
    - [x] Implement replying to threads functionality.
-   - [ ] Implement applying to join a block functionality.
 
 4. **Information Display and Updates**
 
