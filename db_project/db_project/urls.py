@@ -42,6 +42,7 @@ urlpatterns = [
     path("api/v1/follow/", include("main.urls.follow")),
     path("api/v1/user/", include("main.urls.user")),
     path("api/v1/thread/", include("main.urls.thread")),
+    path("api/v1/message/", include("main.urls.message")),
     path("api/v1/notifications/", include("main.urls.notifications")),
     path("api/v1/friendship/", include("main.urls.friendships")),
     path("accounts/", admin.site.urls),

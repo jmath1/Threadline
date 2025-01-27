@@ -31,14 +31,15 @@ class MessagePermission(BasePermission):
     Custom permission to only allow if the user is tagged or if the user is in the thread's hood.
     """
     def has_object_permission(self, request, view, obj):
-        if view.action in ["retrieve", "list"]:
+        if request.method == "GET":
             # users can only see hood threads or threads that they are tagged in
             if obj.thread.hood:
                 return True
             if obj.user == request.user:
                 return True
-        if view.action in ["destroy"]:
+        if request.method in ["DELETE", "PUT"]:
             # users can only delete their own threads
             return obj.author == request.user
         if view.action == "create":
-            return obj.thread.hood == request.user.hood or obj.thread.user == request.user
+            return obj.thread.hood == request.user.hood or request.user in obj.thread.participants.all()
+        return False

@@ -41,7 +41,7 @@ class BaseTestCase(TestCase):
         if self.token:
             if params:
                 return self.client.put(url, params=params, data=data, headers={"Authorization": f"Bearer {self.token}"})
-            return self.client.put(url, data=data, headers={"Authorization": f"Bearer {self.token}"})
+            return self.client.put(url, data=data, headers={"Authorization": f"Bearer {self.token}"}, content_type="application/json",)
             
         return self.client.put(url, params=params, data=data)
     

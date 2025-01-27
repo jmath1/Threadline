@@ -5,14 +5,20 @@ from rest_framework import serializers
 
 
 class MessageSerializer(serializers.ModelSerializer):
-    content = serializers.CharField(max_length=255)
-    author = UserSerializer()
-    created_at = serializers.DateTimeField()
-    updated_at = serializers.DateTimeField()
-    
+    author = serializers.StringRelatedField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+    thread_id = serializers.IntegerField(write_only=True, required=False)
+
     class Meta:
         model = Message
-        fields = ["content", "author", "created_at", "updated_at"]
+        fields = ["content", "author", "created_at", "updated_at", "thread_id"]
+
+    def create(self, validated_data):
+        if not validated_data.get("thread_id"):
+            raise serializers.ValidationError("Thread ID is required.")
+        validated_data["author"] = self.context["request"].user
+        return super().create(validated_data)
 
 class ThreadSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length=255)
