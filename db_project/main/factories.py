@@ -2,7 +2,7 @@ import factory
 from django.contrib.gis.geos import MultiPolygon, Point, Polygon
 from main.models import (Follow, Friendship, Hood, Message, Notification,
                          Thread, User)
-
+from datetime import datetime
 
 class HoodFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -52,14 +52,17 @@ class ThreadFactory(factory.django.DjangoModelFactory):
     hood = factory.SubFactory(HoodFactory)
     author = factory.SubFactory(UserFactory)
 
-class MessageFactory(factory.django.DjangoModelFactory):
+class MessageFactory(factory.mongoengine.MongoEngineFactory):
     class Meta:
         model = Message
-
-    thread = factory.SubFactory(ThreadFactory)
-    author = factory.SubFactory(UserFactory)
+        
+    thread_id = factory.LazyAttribute(lambda _: str(ThreadFactory().id))  # Reference to Thread (PostgreSQL)
+    author_id = factory.LazyAttribute(lambda _: str(UserFactory().id)) 
     content = factory.Faker("text")
-
+    tags = factory.LazyAttribute(lambda _: [str(UserFactory().id)])
+    created_at = factory.LazyFunction(datetime.now)
+    updated_at = factory.LazyFunction(datetime.now)
+            
 class NotificationFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Notification

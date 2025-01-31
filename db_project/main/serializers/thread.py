@@ -4,21 +4,43 @@ from main.serializers.user import UserSerializer
 from rest_framework import serializers
 
 
-class MessageSerializer(serializers.ModelSerializer):
-    author = serializers.StringRelatedField(read_only=True)
+class MessageSerializer(serializers.Serializer):
+    external_id = serializers.CharField(read_only=True)
+    thread_id = serializers.CharField(write_only=True)
+    author_id = serializers.CharField()
+    content = serializers.CharField(max_length=1000)
+    tags = serializers.ListField(
+        child=serializers.IntegerField(),  # List of User IDs
+        required=False
+    )
     created_at = serializers.DateTimeField(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)
-    thread_id = serializers.IntegerField(write_only=True, required=False)
 
-    class Meta:
-        model = Message
-        fields = ["content", "author", "created_at", "updated_at", "thread_id"]
+    def validate_tags(self, tags):
+        # Ensure all tag IDs exist in the PostgreSQL User table
+        missing_users = [tag for tag in tags if not User.objects.filter(id=tag).exists()]
+        if missing_users:
+            raise serializers.ValidationError(f"Invalid user IDs: {missing_users}")
+        return tags
+    
+    def validate_thread_id(self, thread_id):
+        # Ensure the thread ID exists in the PostgreSQL Thread table
+        if not Thread.objects.filter(id=thread_id).exists():
+            raise serializers.ValidationError("Invalid thread ID.")
+        return thread_id
 
     def create(self, validated_data):
-        if not validated_data.get("thread_id"):
-            raise serializers.ValidationError("Thread ID is required.")
-        validated_data["author"] = self.context["request"].user
-        return super().create(validated_data)
+        # Save to MongoDB
+        return Message(**validated_data).save()
+
+    def update(self, instance, validated_data):
+        # Update the MongoDB document
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        instance.save()
+        return instance
+    
+
 
 class ThreadSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length=255)
@@ -45,29 +67,25 @@ class CreateThreadSerializer(serializers.Serializer):
         fields = ["name", "type", "hood", "participants", "content"]
     
     def save(self, **kwargs):
+        thread = Thread.objects.create(
+            name=self.validated_data["name"],
+            type=self.validated_data["type"],
+            hood=self.validated_data.get("hood"),
+            author=self.context["request"].user
+        )
+
         try:
-            with transaction.atomic():
-                # Create the thread
-                thread = Thread.objects.create(
-                    name=self.validated_data["name"],
-                    type=self.validated_data["type"],
-                    hood=self.validated_data.get("hood"),
-                    author=self.context["request"].user
-                )
+            message = Message.objects.create(
+                thread_id=thread.id,
+                author_id=self.context["request"].user.id,
+                content=self.validated_data["content"]
+            )
 
-                # Create the initial message
-                message = Message.objects.create(
-                    thread=thread,
-                    author=self.context["request"].user,
-                    content=self.validated_data["content"]
-                )
-
-                # Handle tagged users and add participants
-                self._handle_tags(self.context["request"].user, thread, message.content)
-
-                return thread
+            self._handle_tags(self.context["request"].user, thread, message.content)
+            return thread
         except Exception as e:
             # Log or handle the exception as needed
+            thread.delete()
             raise serializers.ValidationError(f"Failed to create thread: {e}")
 
     def _handle_tags(self, author, thread, message_content):

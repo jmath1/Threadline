@@ -12,6 +12,10 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import logging
 import os
 from pathlib import Path
+import sys
+from mongoengine import connect
+
+IS_TESTING = "test" in sys.argv
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +69,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "main.middleware.logging_middleware.LoggingMiddleware"
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -114,7 +119,7 @@ DATABASES = {
             'ALIAS': 'test',
             'USER': 'myuser',
             'PASSWORD': 'mypassword',
-            'HOST': '0.0.0.0',
+            'HOST': 'postgres',
             'PORT': '5432',
             'MIGRATE': True
         }}
@@ -177,3 +182,52 @@ REST_FRAMEWORK = {
 JWT_EXPIRATION_TIME = 60000 # 10 minutes
 
 TEST_RUNNER = 'main.runners.GISDataTestRunner'
+
+
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER','redis://redis:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+
+if os.getenv("LOGGING_HOST"):
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'json': {
+                'format': '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s", "module": "%(module)s"}',
+            },
+        },
+        'handlers': {
+            'logstash': {
+                'level': 'DEBUG',
+                'class': 'logging.handlers.SocketHandler',
+                'host': os.getenv('LOGGING_HOST', '0.0.0.0'),
+                'port': int(os.getenv('LOGGING_PORT', 5044)),
+                'formatter': 'json',
+            },
+        },
+        'loggers': {
+            'django': {
+                'handlers': ['logstash'],
+                'level': 'DEBUG',
+                'propagate': True,
+            },
+        },
+    }
+
+
+# MongoDB Connection
+MONGO_HOST = os.getenv("MONGO_HOST", "mongo")
+MONGO_PORT = os.getenv("MONGO_PORT", 27017)
+
+if IS_TESTING:
+    MONGO_DATABASE_NAME = "test"
+else:
+    MONGO_DATABASE_NAME = os.getenv("MONGO_DATABASE_NAME", "messages_db")
+
+MONGO_URI = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/{MONGO_DATABASE_NAME}"
+connect(
+    MONGO_DATABASE_NAME,
+    host=MONGO_URI
+)

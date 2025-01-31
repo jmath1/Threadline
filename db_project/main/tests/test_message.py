@@ -2,47 +2,50 @@ from django.contrib.gis.geos import Point
 from main.factories import MessageFactory
 from main.models import Message, Thread
 from main.tests.base import BaseTestCase
+from main.factories import ThreadFactory
 
 
 class MessageTests(BaseTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.mock_geocode_address.return_value = Point(-75.1764407, 39.9404423, srid=4326)
+    
     def setUp(self):
-        super().setUp()
-        self.mock_geocode_address.return_value = Point(-75.1764407, 39.9404423, srid=4326)
-        # Register and log in a test user
-        self.user = self.register_user()
-        self.login_user()
-        # Create a test thread
-        self.thread = Thread.objects.create(name="Test Thread", type="general", author=self.user)
-
-    def test_create_message(self):
+        Thread.objects.all().delete()
+        self.thread = Thread.objects.create(name="Test Thread", type="general", author_id=self.user.id)
+        self.login_user(self.user)
+        
+    def test_create_message_public(self):
         """
         Test creating a message in a thread.
         """
         url = f"/api/v1/message/"
         data = {"content": "This is a test message.", "thread_id": self.thread.id}
+        self.thread.participants.add(self.user)
         response = self.post(url, data=data)
 
         self.assertEqual(response.status_code, 201)
         self.assertEqual(Message.objects.count(), 1)
         message = Message.objects.first()
         self.assertEqual(message.content, "This is a test message.")
-        self.assertEqual(message.author, self.user)
-        self.assertEqual(message.thread, self.thread)
+        self.assertEqual(message.author_id, self.user.id)
+        self.assertEqual(message.thread_id, self.thread.id)
 
     def test_edit_message(self):
         """
         Test editing a message.
         """
         # Create a message
-        message = Message.objects.create(content="Original content", author=self.user, thread=self.thread)
+        message = Message.objects.create(content="Original content", author_id=self.user.id, thread_id=self.thread.id)
 
         # Edit the message
-        url = f"/api/v1/message/{message.id}/"
+        url = f"/api/v1/message/{message.external_id}/"
         data = {"content": "Updated content"}
         response = self.put(url, data=data)
 
         self.assertEqual(response.status_code, 200)
-        message.refresh_from_db()
+        message = Message.objects.first()
         self.assertEqual(message.content, "Updated content")
 
     def test_delete_message(self):
@@ -50,10 +53,9 @@ class MessageTests(BaseTestCase):
         Test deleting a message.
         """
         # Create a message
-        message = Message.objects.create(content="To be deleted", author=self.user, thread=self.thread)
-
+        message = Message.objects.create(content="To be deleted", author_id=self.user.id, thread_id=self.thread.id)
         # Delete the message
-        url = f"/api/v1/message/{message.id}/"
+        url = f"/api/v1/message/{message.external_id}/"
         response = self.delete(url)
 
         self.assertEqual(response.status_code, 204)
@@ -66,9 +68,47 @@ class MessageTests(BaseTestCase):
         url = "/api/v1/message/"
         data = {"content": "This will fail.", "thread_id": 99999}
         response = self.post(url, data=data)
-
         self.assertEqual(response.status_code, 404)
+        self.assertEqual(Message.objects.count(), 0)
+        self.assertEqual(response.json(), {'detail': 'No Thread matches the given query.'})
 
+    def test_create_message_private_thread_non_participant(self):
+        """
+        Test creating a message in a private thread that the user does not participate in
+        """
+        url = "/api/v1/message/"
+        thread = ThreadFactory(name="Private Thread", type="PRIVATE")
+        data = {"content": "This will fail.", "thread_id": thread.id}
+        response = self.post(url, data=data)
+        self.assertEqual(response.status_code, 403)
+        
+    def test_create_message_private_thread_participant(self):
+        """
+        Test creating a message in a private thread that the user participates in
+        """
+        url = "/api/v1/message/"
+        thread = ThreadFactory(name="Private Thread", type="PRIVATE")
+        thread.participants.add(self.user)
+        data = {"content": "This will succeed.", "thread_id": thread.id}
+        response = self.post(url, data=data)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Message.objects.count(), 1)
+        message = Message.objects.first()
+        self.assertEqual(message.content, "This will succeed.")
+        self.assertEqual(message.author_id, self.user.id)
+        self.assertEqual(message.thread_id, thread.id)
+            
+    def test_create_message_non_hood_member(self):
+        """
+        Test creating a message in a thread in a hood that the user is not a member of.
+        """
+        url = "/api/v1/message/"
+        thread = ThreadFactory(name="Hood Thread")
+        data = {"content": "This will fail.", "thread_id": thread.id}
+        response = self.post(url, data=data)
+        self.assertEqual(response.status_code, 403)
+    
+        
     def test_edit_message_permission_denied(self):
         """
         Test editing a message authored by another user.
@@ -77,12 +117,12 @@ class MessageTests(BaseTestCase):
         message = MessageFactory(content="Their message")
 
         # Try editing their message
-        url = f"/api/v1/message/{message.id}/"
+        url = f"/api/v1/message/{message.external_id}/"
         data = {"content": "Malicious update"}
         response = self.put(url, data=data)
 
-        self.assertEqual(response.status_code, 404)  # User cannot see/edit the message
-        message.refresh_from_db()
+        self.assertEqual(response.status_code, 403)  # User cannot see/edit the message
+        message = Message.objects.first()
         self.assertEqual(message.content, "Their message")
 
     def test_delete_message_permission_denied(self):
@@ -92,8 +132,8 @@ class MessageTests(BaseTestCase):
         # Create a second user and message by them
         message = MessageFactory()
         # Try deleting their message
-        url = f"/api/v1/message/{message.id}/"
+        url = f"/api/v1/message/{message.external_id}/"
         response = self.delete(url)
 
-        self.assertEqual(response.status_code, 404)  # User cannot see/delete the message
+        self.assertEqual(response.status_code, 403)
         self.assertEqual(Message.objects.count(), 1)

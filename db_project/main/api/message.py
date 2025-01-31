@@ -9,16 +9,26 @@ from rest_framework.generics import (CreateAPIView, DestroyAPIView,
                                      RetrieveUpdateDestroyAPIView)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
-
+from rest_framework.exceptions import NotFound
 
 # Edit a message
 class UpdateDestroyMessage(RetrieveUpdateDestroyAPIView):
     serializer_class = MessageSerializer
     permission_classes = [MessagePermission, IsAuthenticated]
     
+    def get_object(self):
+        """
+        Ensures that we retrieve the object safely and handle errors before permissions.
+        """
+        external_id = self.kwargs.get('external_id')
+        try:
+            message = Message.objects.get(external_id=external_id)
+            return message
+        except Message.DoesNotExist:
+            raise NotFound("Message not found")
+
     def get_queryset(self):
-        return Message.objects.filter(author=self.request.user)
+        return Message.objects.filter(author_id=self.request.user.id)
 
     @swagger_auto_schema(
         operation_description="Edit a message",
@@ -26,7 +36,14 @@ class UpdateDestroyMessage(RetrieveUpdateDestroyAPIView):
         responses={200: MessageSerializer, 404: "Message not found."}
     )
     def put(self, request, *args, **kwargs):
-        return super().update(request, *args, **kwargs)
+        message = self.get_object()
+        if message.author_id != request.user.id:
+            return Response({"detail": "You do not have permission to edit this message."}, status=status.HTTP_403_FORBIDDEN)
+        serializer = self.get_serializer(message, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
     @swagger_auto_schema(
@@ -35,7 +52,7 @@ class UpdateDestroyMessage(RetrieveUpdateDestroyAPIView):
     )
     def delete(self, request, *args, **kwargs):
         message = self.get_object()
-        if message.author != request.user:
+        if message.author_id != request.user.id:
             return Response({"detail": "You do not have permission to delete this message."}, status=status.HTTP_403_FORBIDDEN)
         return super().destroy(request, *args, **kwargs)
 
@@ -51,9 +68,10 @@ class CreateMessage(CreateAPIView):
         responses={201: MessageSerializer, 400: "Invalid data.", 403: "Permission denied."}
     )
     def post(self, serializer):
-        data = self.request.data
-        thread = get_object_or_404(Thread, id=data.get("thread_id"))
+        data = self.request.data.dict()
+        author_id = self.request.user.id
+        data['author_id'] = author_id
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(author=self.request.user)
+        serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)

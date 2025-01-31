@@ -3,5 +3,5 @@ from main.api import message as api
 
 urlpatterns = [
     path("", api.CreateMessage.as_view()),
-    path("<int:pk>/", api.UpdateDestroyMessage.as_view()),
+    path("<str:external_id>/", api.UpdateDestroyMessage.as_view()),
 ]

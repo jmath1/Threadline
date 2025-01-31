@@ -1,26 +1,46 @@
 from unittest.mock import patch
 
-from django.test import Client, TestCase
+from rest_framework.test import APIClient, APITestCase
 from main.models import User
+from pymongo import MongoClient
+from main.models import Message
+from rest_framework_simplejwt.tokens import RefreshToken
+from main.factories import UserFactory
 
-
-class BaseTestCase(TestCase):
+class BaseTestCase(APITestCase):
     token = None
+    mongo_client = None
+    mongo_db = None
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
 
+        # Set up MongoDB test database
+        cls.mongo_client = MongoClient("mongodb://mongo:27017/")
+        cls.mongo_db = cls.mongo_client["test"]
+        Message._meta["db_alias"] = "test"  # Set test DB alias for mongoengine
+        cls.mongo_db["messages"].delete_many({})  # Ensure the test collection is clean
+
+        cls.user = UserFactory(username="user1", email="user1@gmail.com")
+
         cls.geocode_patcher = patch("main.utils.utils.geocode_address")
         cls.mock_geocode_address = cls.geocode_patcher.start()
-
+    
+    def tearDown(self):
+        Message.objects.all().delete() 
+        self.mock_geocode_address.reset_mock()
+        super().tearDown()
+        
     @classmethod
     def tearDownClass(cls):
+        cls.mongo_client.drop_database("test")
+        cls.mongo_client.close()
         cls.geocode_patcher.stop()
         super().tearDownClass()
         
     def setUp(self):
-        self.client = Client()
+        self.mongo_db["messages"].delete_many({}) 
         self.mock_geocode_address.reset_mock()
         
     def get(self, url, params=None, data=None, auth=False):
@@ -30,13 +50,18 @@ class BaseTestCase(TestCase):
         return self.client.get(url, params=params, data=data)
     
     def post(self, url, params=None, data=None):
+       
         if self.token:
             if params:
-                return self.client.post(url, params=params, data=data, headers={"Authorization": f"Bearer {self.token}"})
-            return self.client.post(url, data=data, headers={"Authorization": f"Bearer {self.token}"})
-            
-        return self.client.post(url, params=params, data=data)
+                res = self.client.post(url, params=params, data=data, headers={"Authorization": f"Bearer {self.token}"})
+            res = self.client.post(url, data=data, headers={"Authorization": f"Bearer {self.token}"})
+        else:
+            res = self.client.post(url, params=params, data=data)
     
+        if res.status_code == 400:
+            print(res.json())
+        return res
+
     def put(self, url, params=None, data=None):
         if self.token:
             if params:
@@ -76,11 +101,11 @@ class BaseTestCase(TestCase):
         user = User.objects.get(username=username)
         return user
 
-    def login_user(self, username="newuser", password="password"):
-        res = self.post("/api/v1/token/", data={"username": username, "password": password})
-        if res.status_code == 200:
-            self.token = res.json()["access"]
-        else:
-            raise Exception("Login failed")
-        return res
+    def get_auth_token(self, user):
+        """Generate a token for the given user without hitting the endpoint."""
+        refresh = RefreshToken.for_user(user)
+        return str(refresh.access_token)
     
+    def login_user(self, user):
+        token = self.get_auth_token(user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')

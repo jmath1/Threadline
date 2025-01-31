@@ -7,6 +7,10 @@ from main.constants import (FRIEND_REQUEST_STATUS_CHOICES,
                             NOTIFICATION_STATUSES, NOTIFICATION_TYPES,
                             THREAD_TYPES)
 
+from mongoengine import Document, StringField, DateTimeField, IntField, ListField
+from datetime import datetime
+from main.utils.utils import encode_internal_id, decode_external_id
+from mongoengine.queryset import QuerySet
 
 class Hood(models.Model):
     name = models.CharField(max_length=50, unique=True)
@@ -210,32 +214,40 @@ class Thread(models.Model):
         related_name='created_threads'
     )
 
+    @property
+    def messages(self):
+        # Return all messages in the thread (from mongo)
+        return Message.objects(thread_id=self.id)
+    
     def __str__(self):
         return self.name if self.name else f"{self.type} thread"
 
-class Message(models.Model):
-    thread = models.ForeignKey(
-        Thread,
-        on_delete=models.CASCADE,
-        related_name='messages'
-    )
-    author = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='sent_messages'
-    )
-    content = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    tags = models.ManyToManyField(
-        User,
-        related_name='tagged_messages',
-        blank=True
-    )
+class MessageQueryset(QuerySet):
+    def get(self, *args, **kwargs):
+        if not kwargs.get('external_id'):
+            raise ValueError("external_id is required")
+        external_id = kwargs.pop('external_id')
+        message_id = decode_external_id(external_id)
+        return super().get(*args, **kwargs, id=message_id)
+    
+class Message(Document):
+    thread_id = IntField(required=True)  # Reference to Thread in PostgreSQL
+    author_id = IntField(required=True)  # Reference to User in PostgreSQL
+    content = StringField(required=True, max_length=1000)
+    created_at = DateTimeField(default=datetime.utcnow)
+    updated_at = DateTimeField(default=datetime.utcnow)
+    tags = ListField(StringField())  # List of User IDs from PostgreSQL
 
-    def __str__(self):
-        return f"Message by {self.author.username} in {self.thread}"
-
+    meta = {
+        'collection': 'messages',
+        'indexes': ['thread_id', 'author_id', 'tags'],
+        'queryset_class': MessageQueryset,
+    }
+    
+    @property
+    def external_id(self):
+        return encode_internal_id(self.id)
+    
 class UserAccess(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     thread = models.ForeignKey(Thread, on_delete=models.CASCADE)
@@ -247,7 +259,7 @@ class UserAccess(models.Model):
 class Notification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user')    
     thread = models.ForeignKey(Thread, on_delete=models.CASCADE, null=True)
-    message = models.ForeignKey(Message, on_delete=models.CASCADE, null=True)
+    message_id = models.IntegerField()
     friendship = models.ForeignKey(Friendship, on_delete=models.CASCADE, null=True)
     follow = models.ForeignKey(Follow, on_delete=models.CASCADE, null=True)
     datetime = models.DateTimeField(default=models.functions.Now())
