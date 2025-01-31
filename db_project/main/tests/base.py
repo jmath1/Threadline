@@ -81,7 +81,7 @@ class BaseTestCase(APITestCase):
         first_name="Jonathan", 
         last_name="Math", 
         description="required", 
-        address="2003 Carpenter St, Philadelphia"
+        address="Next St, New York"
         ):
         
         data = {

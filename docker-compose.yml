@@ -1,6 +1,35 @@
 version: "3.8"
 
 services:
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: ../docker/front.Dockerfile
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./frontend:/app
+  #   command: npm run start
+  backend:
+    container_name: backend
+    build:
+      context: ./db_project
+      dockerfile: ../docker/back.Dockerfile
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./db_project:/app
+      - ./venv/lib/python3.11/site-packages:/usr/local/lib/python3.11/site-packages # volumize virtual environment for debugging
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - elasticsearch
+      - redis
+    environment:
+      DATABASE_URL: postgres://myuser:mypassword@db:5432/project1
+    env_file:
+      - .env
+
   postgres:
     image: postgis/postgis
     container_name: postgres_db
@@ -15,29 +44,59 @@ services:
       - "5432:5432"
     volumes:
       - ${PWD}/docker/volumes/postgres:/var/lib/postgresql/data
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: ../docker/front.Dockerfile
-  #   ports:
-  #     - "3000:3000"
-  #   volumes:
-  #     - ./frontend:/app
-  #   command: npm run start
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "myuser", "-d", "project1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
-  backend:
-    build:
-      context: ./db_project
-      dockerfile: ../docker/back.Dockerfile
-    command: python manage.py runserver 0.0.0.0:8000
-    volumes:
-      - ./db_project:/app
-      - ./venv/lib/python3.11/site-packages:/usr/local/lib/python3.11/site-packages
+  redis:
+    image: redis:latest
+    container_name: redis_server
+    command: redis-server
     ports:
-      - "8000:8000"
-    depends_on:
-      - postgres
-    environment:
-      DATABASE_URL: postgres://myuser:mypassword@db:5432/project1
-    env_file:
-      - .env
+      - "6379:6379"
+    volumes:
+      - ${PWD}/docker/volumes/redis:/data
+    restart: unless-stopped
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - ${PWD}/docker/volumes/mongo:/data/db
+    restart: unless-stopped
+
+  # elasticsearch:
+  #   image: elasticsearch:8.16.3
+  #   container_name: elasticsearch
+  #   environment:
+  #     - discovery.type=single-node
+  #     - bootstrap.memory_lock=true
+  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  #     - ELASTIC_PASSWORD=changeme
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   ports:
+  #     - "9200:9200"
+  #     - "9300:9300"
+  #   volumes:
+  #     - ${PWD}/docker/volumes/elasticsearch:/usr/share/elasticsearch/data
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test:
+  #       [
+  #         "CMD",
+  #         "curl",
+  #         "-f",
+  #         "-u",
+  #         "elastic:changeme",
+  #         "http://localhost:9200/_cluster/health",
+  #       ]
+  #     interval: 15s
+  #     timeout: 30s
+  #     retries: 5
+  #     start_period: 10s
