@@ -47,7 +47,13 @@ jobs:
 
       - name: Build Backend Docker Image
         run: docker build -t backend-test -f docker/back.Dockerfile .
-
+      - name: Wait for Services
+        run: |
+          for i in {1..30}; do
+            nc -z postgres 5432 && nc -z mongo 27017 && break
+            echo "Waiting for database services..."
+            sleep 2
+          done
       - name: Run Backend Tests
         run: |
           docker run --rm --network=host \
