@@ -50,5 +50,7 @@ jobs:
 
       - name: Run Backend Tests
         run: |
-          docker run --rm \
+          docker run --rm --network=host \
+            -e POSTGRES_HOST=localhost \
+            -e MONGO_HOST=localhost \
             backend-test python manage.py test
