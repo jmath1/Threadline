@@ -43,7 +43,7 @@ Copy the `.env.template` file to `.env` and fill in the `GOOGLE_API_KEY` to get 
    - [x] Implement replying to threads functionality.
    - [x] Restrict message creation to threads that are public, associated with the user's hood, or where the user is a participant.
    - [x] Restrict thread creation to hoods that are associated with the user.
-   - [ ] Restrict thread/message tagging to users that the author is friends with.
+   - [x] Restrict thread/message tagging to users that the author is friends with.
 
 4. **Information Display and Updates**
 
