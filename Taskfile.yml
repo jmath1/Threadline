@@ -1,0 +1,31 @@
+version: "3"
+
+vars:
+  namespace: "django-app"
+
+tasks:
+  build-images:
+    desc: Build Docker images for the project
+    cmds:
+      - echo "Building Docker images..."
+      - docker build -t django-app:latest -f ./docker/back.Dockerfile .
+
+  deploy_minikube:
+    desc: Run the deploy script to deploy everything to Minikube
+    cmds:
+      - echo "Running deploy.sh..."
+      - eval $(minikube -p minikube docker-env) && ./_infrastructure/kubernetes/deploy.sh
+
+  teardown_minikube:
+    desc: Tear down all resources in the namespace
+    cmds:
+      - echo "Deleting all resources in the namespace '{{.namespace}}'..."
+      - kubectl delete all --all -n {{.namespace}}
+      - echo "Deleting namespace '{{.namespace}}'..."
+      - kubectl delete namespace {{.namespace}}
+
+  restart_minikube:
+    desc: Restart the deployment process (teardown and redeploy)
+    cmds:
+      - task teardown_minikube
+      - task deploy_minikube
