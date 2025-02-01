@@ -184,7 +184,7 @@ JWT_EXPIRATION_TIME = 60000 # 10 minutes
 TEST_RUNNER = 'main.runners.GISDataTestRunner'
 
 
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER','redis://redis:6379/0')
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER',f'redis://{os.getenv("REDIS_HOST", "redis")}:6379/0')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 

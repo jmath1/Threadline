@@ -59,4 +59,5 @@ jobs:
           docker run --rm --network=host \
             -e POSTGRES_HOST=localhost \
             -e MONGO_HOST=localhost \
+            -e REDIS_HOST=localhost \
             backend-test python manage.py test
