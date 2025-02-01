@@ -1,5 +1,5 @@
 from django.contrib.gis.geos import Point
-from main.factories import ThreadFactory, UserFactory
+from main.factories import ThreadFactory, UserFactory, FriendshipFactory
 from main.models import Hood, Thread
 from main.tests.base import BaseTestCase
 
@@ -103,7 +103,8 @@ class CreateThreadTest(BaseTestCase):
         self.assertEqual(Thread.objects.get().messages.all()[0].content, "Test Content")
         
     def test_create_private_thread(self):
-        UserFactory(username="user2", email="test2@gmail.com")
+        user_2 = UserFactory(username="user2", email="test2@gmail.com")
+        FriendshipFactory(from_user=self.user, to_user=user_2, status="ACCEPTED")
         data = {
             "name": "Test Thread",
             "type": "PRIVATE",

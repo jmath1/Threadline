@@ -1,16 +1,50 @@
-from django.db import transaction
-from main.models import Hood, Message, Thread, User
+from main.models import Hood, Message, Tag, Thread, User
+
 from main.serializers.user import UserSerializer
 from rest_framework import serializers
 
+def handle_tags(author, thread, message):
+    """
+    Parse message content for tags (e.g., '@username') and add tagged users as participants.
+    """
+    # Parse tags from the message. Only include friends of author
+    message_content = message.content
+    tagged_usernames = {word[1:] for word in message_content.split() if word.startswith('@')}
+    tagged_users = author.get_friends().filter(username__in=tagged_usernames)
 
+    # Add tagged users to the thread participants
+    for user in tagged_users:
+        thread.participants.add(user)
+        message.tags.append(Tag(
+            user_id=user.id,
+            username=user.username
+        ))
+
+    # Add the author to the thread participants
+    thread.participants.add(author)
+    thread.save()
+    message.save()
+
+class TagSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    username = serializers.CharField()
+
+    def to_representation(self, instance):
+        return {
+            "user_id": instance.user_id,
+            "username": instance.username
+        }
+
+    def to_internal_value(self, data):
+        return User.objects.get(id=data)
+    
 class MessageSerializer(serializers.Serializer):
     external_id = serializers.CharField(read_only=True)
     thread_id = serializers.CharField(write_only=True)
     author_id = serializers.CharField()
     content = serializers.CharField(max_length=1000)
     tags = serializers.ListField(
-        child=serializers.IntegerField(),  # List of User IDs
+        child=TagSerializer(),
         required=False
     )
     created_at = serializers.DateTimeField(read_only=True)
@@ -31,13 +65,20 @@ class MessageSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         # Save to MongoDB
-        return Message(**validated_data).save()
+        # try:
+        message = Message(**validated_data).save()
+        handle_tags(thread=Thread.objects.get(id=validated_data["thread_id"]), author=self.context['request'].user, message=message)
+        # except Exception as exc:
+        #     import pdb; pdb.set_trace()
+        #     raise serializers.ValidationError("Failed to create message.")
+        return message
 
     def update(self, instance, validated_data):
         # Update the MongoDB document
         for field, value in validated_data.items():
             setattr(instance, field, value)
         instance.save()
+        handle_tags(thread=Thread.objects.get(id=instance.thread_id), author=self.context['request'].user, message=instance)
         return instance
     
 
@@ -81,25 +122,11 @@ class CreateThreadSerializer(serializers.Serializer):
                 content=self.validated_data["content"]
             )
 
-            self._handle_tags(self.context["request"].user, thread, message.content)
+            handle_tags(self.context["request"].user, thread, message)
             return thread
         except Exception as e:
             # Log or handle the exception as needed
             thread.delete()
             raise serializers.ValidationError(f"Failed to create thread: {e}")
 
-    def _handle_tags(self, author, thread, message_content):
-        """
-        Parse message content for tags (e.g., '@username') and add tagged users as participants.
-        """
-        # Parse tags from the message
-        tagged_usernames = {word[1:] for word in message_content.split() if word.startswith('@')}
-        tagged_users = User.objects.filter(username__in=tagged_usernames)
 
-        # Add tagged users to the thread participants
-        for user in tagged_users:
-            thread.participants.add(user)
-
-        # Add the author to the thread participants
-        thread.participants.add(author)
-        thread.save()

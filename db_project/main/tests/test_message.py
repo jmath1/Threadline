@@ -2,7 +2,7 @@ from django.contrib.gis.geos import Point
 from main.factories import MessageFactory
 from main.models import Message, Thread
 from main.tests.base import BaseTestCase
-from main.factories import ThreadFactory
+from main.factories import ThreadFactory, UserFactory, FriendshipFactory
 
 
 class MessageTests(BaseTestCase):
@@ -137,3 +137,44 @@ class MessageTests(BaseTestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(Message.objects.count(), 1)
+
+    # test Restrict thread/message tagging to users that the author is friends with.
+    def test_tagging_friends_allowed(self):
+        """
+        Test tagging a friend in a message.
+        """
+        friend = UserFactory(username='friend')
+        thread = ThreadFactory(author=self.user)
+        thread.participants.add(self.user)
+        friendship = FriendshipFactory(from_user=self.user, to_user=friend, status="ACCEPTED")
+        url = f"/api/v1/message/"
+        data = {"content": "Hello @friend", "thread_id": thread.id}
+        response = self.post(url, data=data)
+        self.assertEqual(response.status_code, 201)
+        message = Message.objects.first()
+        self.assertEqual(message.tags[0].username, 'friend')
+        self.assertEqual(message.content, "Hello @friend")
+        self.assertEqual(message.author_id, self.user.id)
+        self.assertEqual(message.thread_id, thread.id)
+        self.assertEqual(message.tags[0].user_id, friend.id)
+        self.assertEqual(thread.participants.count(), 2)
+        
+    def test_tagging_not_friend_not_allowed(self):
+        """
+        Test that friends are not allowed to tag users that are not their friends
+        """
+        other_user = UserFactory(username='other_user')
+        thread = ThreadFactory(author=self.user)
+        thread.participants.add(self.user)
+        url = f"/api/v1/message/"
+        data = {"content": "Hello @other_user", "thread_id": thread.id}
+        response = self.post(url, data=data)
+        self.assertEqual(response.status_code, 201)
+        message = Message.objects.first()
+        self.assertTrue(len(message.tags) == 0 )
+        self.assertEqual(message.content, "Hello @other_user")
+        self.assertEqual(message.author_id, self.user.id)
+        self.assertEqual(message.thread_id, thread.id)
+        self.assertEqual(thread.participants.count(), 1)
+        self.assertEqual(thread.participants.first(), self.user)
+        

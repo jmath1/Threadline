@@ -6,8 +6,7 @@ from django.db import models
 from main.constants import (FRIEND_REQUEST_STATUS_CHOICES,
                             NOTIFICATION_STATUSES, NOTIFICATION_TYPES,
                             THREAD_TYPES)
-
-from mongoengine import Document, StringField, DateTimeField, IntField, ListField
+from mongoengine import Document, StringField, DateTimeField, IntField, ListField, EmbeddedDocument, EmbeddedDocumentField
 from datetime import datetime
 from main.utils.utils import encode_internal_id, decode_external_id
 from mongoengine.queryset import QuerySet
@@ -229,6 +228,10 @@ class MessageQueryset(QuerySet):
         external_id = kwargs.pop('external_id')
         message_id = decode_external_id(external_id)
         return super().get(*args, **kwargs, id=message_id)
+
+class Tag(EmbeddedDocument):
+    user_id = IntField(required=True)
+    username = StringField(required=True)
     
 class Message(Document):
     thread_id = IntField(required=True)  # Reference to Thread in PostgreSQL
@@ -236,7 +239,8 @@ class Message(Document):
     content = StringField(required=True, max_length=1000)
     created_at = DateTimeField(default=datetime.utcnow)
     updated_at = DateTimeField(default=datetime.utcnow)
-    tags = ListField(StringField())  # List of User IDs from PostgreSQL
+    # the tagged users ids and usernames
+    tags = ListField(EmbeddedDocumentField(Tag), required=False)  # the tagged users ids and usernames
 
     meta = {
         'collection': 'messages',
