@@ -6,6 +6,7 @@ from pymongo import MongoClient
 from main.models import Message
 from rest_framework_simplejwt.tokens import RefreshToken
 from main.factories import UserFactory
+from django.conf import settings
 
 class BaseTestCase(APITestCase):
     token = None
@@ -17,7 +18,7 @@ class BaseTestCase(APITestCase):
         super().setUpClass()
 
         # Set up MongoDB test database
-        cls.mongo_client = MongoClient("mongodb://mongo:27017/")
+        cls.mongo_client = MongoClient(f"mongodb://{settings.MONGO_HOST}:27017/")
         cls.mongo_db = cls.mongo_client["test"]
         Message._meta["db_alias"] = "test"  # Set test DB alias for mongoengine
         cls.mongo_db["messages"].delete_many({})  # Ensure the test collection is clean
