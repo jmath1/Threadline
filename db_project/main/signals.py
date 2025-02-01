@@ -1,6 +1,6 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from main.models import Follow, Friendship
+from main.models import Follow, Friendship, Message
 from main.tasks import create_notification
 
 
@@ -31,3 +31,25 @@ def notify_follower(sender, instance, created, **kwargs):
             related_model="follow",
             related_model_id=instance.id
         )
+
+@receiver(post_save, sender=Message)
+def notify_participants(sender, instance, created, **kwargs):
+    if created:
+        for participant in instance.thread.participants.all():
+            create_notification.delay(
+                user_id=participant.id,
+                notification_type="PARTICIPANT THREAD NEW MESSAGE",
+                related_model="message",
+                related_model_id=instance.id
+            )
+
+@receiver(post_save, sender=Message)
+def notify_new_tag(sender, instance, created, **kwargs):
+    if created:
+        for tag in instance.tags.all():
+            create_notification.delay(
+                user_id=tag.user_id,
+                notification_type="TAGGED",
+                related_model="message",
+                related_model_id=instance.id
+            )

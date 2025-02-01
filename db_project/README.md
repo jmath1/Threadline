@@ -56,8 +56,8 @@ Copy the `.env.template` file to `.env` and fill in the `GOOGLE_API_KEY` to get 
    - [x] Create notification signals for friend requests creation.
    - [x] Create notification signals for friend acceptance.
    - [x] Create notification signals for a new follower.
-   - [ ] Create notifications for a new message in a thread that the user is a participant.
-   - [ ] Create notifications for a new tag in a message.
+   - [x] Create notifications for a new message in a thread that the user is a participant.
+   - [x] Create notifications for a new tag in a message.
 
 6. **Navigation and Search Functions**
 

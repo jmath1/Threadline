@@ -6,5 +6,5 @@ def create_notification(user_id, notification_type, related_model, related_model
     Notification.objects.create(
         user_id=user_id,
         type=notification_type,
-        **{related_model: related_model_id}
+        related_model=related_model_id,
     )
