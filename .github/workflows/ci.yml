@@ -46,7 +46,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Build Backend Docker Image
-        run: docker build -t backend-test -f docker/back.Dockerfile ./db_project
+        run: docker build -t backend-test -f docker/back.Dockerfile .
 
       - name: Run Backend Tests
         run: |
