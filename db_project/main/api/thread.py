@@ -11,6 +11,7 @@ from rest_framework.generics import (CreateAPIView, DestroyAPIView,
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from main.serializers.general import EmptySerializer
 
 class GetHoodThreads(ListAPIView):
     permission_classes = [IsAuthenticated, ThreadPermission]
@@ -67,6 +68,7 @@ class CreateThread(CreateAPIView):
 
 # Follow a thread
 class FollowThread(GenericAPIView):
+    serializer_class = EmptySerializer
 
     @swagger_auto_schema(
         operation_description="Follow a thread",
@@ -81,6 +83,7 @@ class FollowThread(GenericAPIView):
 
 
 class UnfollowThread(GenericAPIView):
+    serializer_class = EmptySerializer
 
     @swagger_auto_schema(
         operation_description="Unfollow a thread",

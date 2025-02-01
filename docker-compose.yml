@@ -13,8 +13,7 @@ services:
   backend:
     container_name: backend
     build:
-      context: ./db_project
-      dockerfile: ../docker/back.Dockerfile
+      dockerfile: ./docker/back.Dockerfile
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - ./db_project:/app
@@ -23,7 +22,7 @@ services:
       - "8000:8000"
     depends_on:
       - postgres
-      - elasticsearch
+      # - elasticsearch
       - redis
     environment:
       DATABASE_URL: postgres://myuser:mypassword@db:5432/project1

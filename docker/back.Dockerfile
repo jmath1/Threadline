@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
 ENV C_INCLUDE_PATH=/usr/include/gdal
 
-COPY requirements.txt /app/
+COPY ./db_project/requirements.txt /app/requirements.txt
 RUN pip install --upgrade pip && pip install -r requirements.txt
 COPY ./db_project /app/
 
