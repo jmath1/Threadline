@@ -110,7 +110,7 @@ DATABASES = {
         'NAME': 'project1',
         'USER': 'myuser',
         'PASSWORD': 'mypassword',
-        'HOST': 'postgres',
+        'HOST': os.getenv("POSTGRES_HOST",'postgres'),
         'PORT': '5432',
         'MIGRATE': True,    
         'TEST': {
