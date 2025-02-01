@@ -34,9 +34,9 @@ jobs:
         image: mongo:latest
         ports:
           - "27017:27017"
-        env:
-          MONGO_INITDB_ROOT_USERNAME: root
-          MONGO_INITDB_ROOT_PASSWORD: example
+        # env:
+        #   MONGO_INITDB_ROOT_USERNAME: root
+        #   MONGO_INITDB_ROOT_PASSWORD: example
 
     steps:
       - name: Checkout repository
@@ -52,4 +52,5 @@ jobs:
         run: |
           docker run --rm --network=host \
             -e POSTGRES_HOST=localhost \
+            -e MONGO_HOST=localhost \
             backend-test python manage.py test
