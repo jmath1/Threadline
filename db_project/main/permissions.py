@@ -1,6 +1,7 @@
-from rest_framework.permissions import BasePermission
-from main.models import Thread
 from django.shortcuts import get_object_or_404
+from main.models import Thread
+from rest_framework.permissions import BasePermission
+
 
 class ThreadPermission(BasePermission):
     """

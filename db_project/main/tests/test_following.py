@@ -1,7 +1,7 @@
 from django.contrib.gis.geos import Point
 from django.urls import reverse
-from main.models import Follow
 from main.factories import UserFactory
+from main.models import Follow
 from main.tests.base import BaseTestCase
 
 

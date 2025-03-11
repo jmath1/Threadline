@@ -5,11 +5,12 @@ from main.models import Message, Thread
 from main.permissions import MessagePermission
 from main.serializers.thread import MessageSerializer
 from rest_framework import status
+from rest_framework.exceptions import NotFound
 from rest_framework.generics import (CreateAPIView, DestroyAPIView,
                                      RetrieveUpdateDestroyAPIView)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.exceptions import NotFound
+
 
 # Edit a message
 class UpdateDestroyMessage(RetrieveUpdateDestroyAPIView):

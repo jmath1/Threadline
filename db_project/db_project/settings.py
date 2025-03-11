@@ -11,8 +11,9 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 import logging
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
+
 from mongoengine import connect
 
 IS_TESTING = "test" in sys.argv
@@ -58,6 +59,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_gis",
     "drf_yasg",
+    "channels"
 ]
 
 MIDDLEWARE = [
@@ -183,8 +185,13 @@ JWT_EXPIRATION_TIME = 60000 # 10 minutes
 
 TEST_RUNNER = 'main.runners.GISDataTestRunner'
 
-
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER',f'redis://{os.getenv("REDIS_HOST", "redis")}:6379/0')
+REDIS_HOST = os.getenv("REDIS_HOST", "redis")
+REDIS_PORT = os.getenv("REDIS_PORT", 6379)
+if IS_TESTING:
+    REDIS_DB = 1
+else:
+    REDIS_DB = os.getenv("REDIS_DB", 0)
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER',f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
@@ -231,3 +238,14 @@ connect(
     MONGO_DATABASE_NAME,
     host=MONGO_URI
 )
+
+ASGI_APPLICATION = 'db_project.asgi.application'
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [(REDIS_HOST, REDIS_PORT)],
+        },
+    },
+}

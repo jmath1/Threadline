@@ -1,12 +1,12 @@
 from unittest.mock import patch
 
-from rest_framework.test import APIClient, APITestCase
-from main.models import User
-from pymongo import MongoClient
-from main.models import Message
-from rest_framework_simplejwt.tokens import RefreshToken
-from main.factories import UserFactory
 from django.conf import settings
+from main.factories import UserFactory
+from main.models import Message, User
+from pymongo import MongoClient
+from rest_framework.test import APIClient, APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
+
 
 class BaseTestCase(APITestCase):
     token = None

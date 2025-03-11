@@ -1,8 +1,8 @@
 from django.contrib.gis.geos import Point
 from django.urls import reverse
+from main.factories import UserFactory
 from main.models import Friendship, User
 from main.tests.base import BaseTestCase
-from main.factories import UserFactory
 
 
 class TestFriendship(BaseTestCase):

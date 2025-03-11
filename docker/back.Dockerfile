@@ -1,6 +1,6 @@
 FROM python:3.11
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
 ENV C_INCLUDE_PATH=/usr/include/gdal
 
-COPY ./db_project/requirements.txt /app/requirements.txt
+COPY ./db_project/requirements.txt /app/
 RUN pip install --upgrade pip && pip install -r requirements.txt
 COPY ./db_project /app/
 

@@ -1,5 +1,5 @@
 from django.contrib.gis.geos import Point
-from main.factories import ThreadFactory, UserFactory, FriendshipFactory
+from main.factories import FriendshipFactory, ThreadFactory, UserFactory
 from main.models import Hood, Thread
 from main.tests.base import BaseTestCase
 

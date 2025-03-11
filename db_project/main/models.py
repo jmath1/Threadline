@@ -1,15 +1,30 @@
 # Create your models here.
+import json
+import logging
+import re
+import uuid
+from datetime import datetime
+
+import redis
+from django.conf import settings
 from django.contrib.auth.models import (AbstractBaseUser, PermissionsMixin,
                                         UserManager)
 from django.contrib.gis.db import models as gis_models
 from django.db import models
+from django.utils.functional import cached_property
 from main.constants import (FRIEND_REQUEST_STATUS_CHOICES,
                             NOTIFICATION_STATUSES, NOTIFICATION_TYPES,
                             THREAD_TYPES)
-from mongoengine import Document, StringField, DateTimeField, IntField, ListField, EmbeddedDocument, EmbeddedDocumentField
-from datetime import datetime
-from main.utils.utils import encode_internal_id, decode_external_id
+from main.tasks import create_notification
+from main.utils.utils import decode_external_id, encode_internal_id
+from mongoengine import (DateTimeField, Document, EmbeddedDocument,
+                         EmbeddedDocumentField, IntField, ListField,
+                         StringField)
 from mongoengine.queryset import QuerySet
+
+logger = logging.getLogger(__name__)
+
+redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=settings.REDIS_DB)
 
 class Hood(models.Model):
     name = models.CharField(max_length=50, unique=True)
@@ -24,6 +39,10 @@ class Hood(models.Model):
     @property
     def member_count(self):
         return self.get_member_count()
+    
+    @property
+    def members(self):
+        return self.user_set.all()
 
 class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=50, unique=True)
@@ -46,19 +65,15 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     objects = UserManager()
 
-    @property
-    def is_authenticated(self):
-        return True
-    
-    @property
+    @cached_property
     def friends_count(self):
-        return self.get_friends().count()
-    
-    @property
+        return self.friends.count()
+
+    @cached_property
     def followers_count(self):
         return self.get_followers().count()
     
-    @property
+    @cached_property
     def following_count(self):
         return self.get_following().count()
     
@@ -70,7 +85,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         return hood_id
 
     def __str__(self):
-        return f"User {self.pk} self.username"
+        return f"User {self.pk} {self.username}"
 
     def confirm_location(self, hood) -> bool:
         confirmed = False
@@ -109,7 +124,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     def unfollow(self, user):
         Follow.objects.filter(follower=self, followee=user).delete()
 
-    def get_friends(self):
+    @cached_property
+    def friends(self):
         return User.objects.filter(
             models.Q(friend_requests_sent__to_user=self, friend_requests_sent__status="ACCEPTED") |
             models.Q(friend_requests_received__from_user=self, friend_requests_received__status="ACCEPTED")
@@ -213,13 +229,17 @@ class Thread(models.Model):
         related_name='created_threads'
     )
 
-    @property
+    @cached_property
     def messages(self):
         # Return all messages in the thread (from mongo)
         return Message.objects(thread_id=self.id)
     
     def __str__(self):
         return self.name if self.name else f"{self.type} thread"
+    
+    @cached_property
+    def participant_users(self):
+        return self.participants.all()
 
 class MessageQueryset(QuerySet):
     def get(self, *args, **kwargs):
@@ -232,6 +252,9 @@ class MessageQueryset(QuerySet):
 class Tag(EmbeddedDocument):
     user_id = IntField(required=True)
     username = StringField(required=True)
+    
+    def __str__(self):
+        return f"Tag {self.username}"
     
 class Message(Document):
     thread_id = IntField(required=True)  # Reference to Thread in PostgreSQL
@@ -248,10 +271,77 @@ class Message(Document):
         'queryset_class': MessageQueryset,
     }
     
-    @property
+    @cached_property
+    def author(self):
+        return User.objects.get(id=self.author_id)
+    
+    @cached_property
     def external_id(self):
         return encode_internal_id(self.id)
+
+    @cached_property
+    def thread(self):
+        return Thread.objects.get(id=self.thread_id)
     
+    def get_participants_and_tagged_users_to_notify(self):
+        mentioned_users = set(re.findall(r'@(\w+)', self.content))
+        # if there is a hood, the user can tag hood members
+        if self.thread.hood:
+            available_users = self.thread.hood.members
+        else:
+            # user can tag friends
+            available_users = self.author.friends | self.thread.participant_users
+        tagged_users = available_users.filter(username__in=[x[0:] for x in mentioned_users])
+        participants_to_notify = self.thread.participant_users.exclude(id__in=[x.id for x in tagged_users]).exclude(id=self.author_id)
+        # add tagged users to the participants but dont send them notifications, they'll receive other notifications
+        return participants_to_notify, tagged_users
+    
+    def build_notification_data(self, users, notification_type):
+        return [
+            {
+                "thread_id": self.thread_id,
+                "message_id": self.external_id,
+                "author_username": self.author.username,
+                "type": notification_type,
+                "user_to_notify": user.id,
+                "id": str(uuid.uuid4())
+            } for user in users
+        ]
+    
+    def notify_users(self, participants_to_notify, tagged_users):
+        new_message_notification_data = self.build_notification_data(participants_to_notify, "NEW MESSAGE")
+        tagged_users_notification_data = self.build_notification_data(tagged_users, "TAGGED")
+        notification_data = new_message_notification_data + tagged_users_notification_data
+        for notification in notification_data:
+            user = notification['user_to_notify']
+            del notification['user_to_notify']
+            redis_key = f"notifications:user:{user}"
+            redis_client.lpush(redis_key, json.dumps(notification))
+            redis_client.ltrim(redis_key, 0, 99)
+
+    def create_tags(self, tagged_users):
+        tags = []
+        for user in tagged_users:
+            tags.append(Tag(user_id=user.id, username=user.username))
+        self.tags = tags
+            
+    def save(self, *args, **kwargs):
+        if self.author not in self.thread.participants.all():
+            self.thread.participants.add(self.author)
+            
+        thread = Thread.objects.get(id=self.thread_id)
+        partipants_to_notify, newly_tagged_users = self.get_participants_and_tagged_users_to_notify()
+        self.create_tags(newly_tagged_users)
+        instance = super().save(*args, **kwargs)
+        self.notify_users(partipants_to_notify, newly_tagged_users)
+    
+        thread.participants.add(*newly_tagged_users)
+        
+        return instance
+    
+    def __str__(self):
+        return f"Message {self.external_id} in thread {self.thread_id} by {self.author_id}"
+
 class UserAccess(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     thread = models.ForeignKey(Thread, on_delete=models.CASCADE)
@@ -259,23 +349,3 @@ class UserAccess(models.Model):
     
     def __str__(self):
         return f"User {self.user.username} accessed thread {self.thread.name}"
-
-class Notification(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user')    
-    thread = models.ForeignKey(Thread, on_delete=models.CASCADE, null=True)
-    message_id = models.IntegerField()
-    friendship = models.ForeignKey(Friendship, on_delete=models.CASCADE, null=True)
-    follow = models.ForeignKey(Follow, on_delete=models.CASCADE, null=True)
-    datetime = models.DateTimeField(default=models.functions.Now())
-    type = models.CharField(max_length=50, choices=NOTIFICATION_TYPES)
-    status = models.CharField(max_length=50, choices=NOTIFICATION_STATUSES, default="UNREAD")
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    class Meta:
-        indexes = [
-            models.Index(fields=['user']),
-            models.Index(fields=['status']),
-        ]
-        
-    def __str__(self):
-        return f"Notification for {self.user.username} - {self.type}"

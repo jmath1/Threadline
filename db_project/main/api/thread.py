@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from main.models import Message, Thread
 from main.permissions import ThreadPermission
+from main.serializers.general import EmptySerializer
 from main.serializers.thread import CreateThreadSerializer, ThreadSerializer
 from rest_framework import status
 from rest_framework.generics import (CreateAPIView, DestroyAPIView,
@@ -11,7 +12,6 @@ from rest_framework.generics import (CreateAPIView, DestroyAPIView,
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from main.serializers.general import EmptySerializer
 
 class GetHoodThreads(ListAPIView):
     permission_classes = [IsAuthenticated, ThreadPermission]

@@ -17,7 +17,7 @@ class ListFriendshipView(ListAPIView):
     serializer_class = FriendshipRequestSerializer
     
     def get_queryset(self):
-        return self.request.user.get_friends()
+        return self.request.user.friends
     
     @swagger_auto_schema(
         operation_description="List all friends of the authenticated user",

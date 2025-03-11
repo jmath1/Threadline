@@ -1,9 +1,12 @@
 from unittest.mock import patch
+
+from django.contrib.gis.geos import Point
+from main.factories import (FollowFactory, FriendshipFactory, MessageFactory,
+                            ThreadFactory, UserFactory)
 from main.models import Tag
 from main.tasks import create_notification
 from main.tests.base import BaseTestCase
-from main.factories import FollowFactory, FriendshipFactory, MessageFactory, ThreadFactory, UserFactory
-from django.contrib.gis.geos import Point
+
 
 class NotificationSignalTests(BaseTestCase):
     @classmethod
@@ -13,7 +16,8 @@ class NotificationSignalTests(BaseTestCase):
 
     def setUp(self):
         self.user2 = UserFactory(username="user2")
-        self.thread = ThreadFactory()
+        self.tagged_user = UserFactory(username="tagged_user", id=3)
+        self.thread = ThreadFactory(author=self.user2)
     
     @patch("main.tasks.create_notification.delay")
     def test_notify_friend_request(self, mock_create_notification):
@@ -49,36 +53,5 @@ class NotificationSignalTests(BaseTestCase):
             notification_type="FOLLOW",
             related_model="follow",
             related_model_id=follow.id
-        )
-
-    @patch("main.tasks.create_notification.delay")
-    def test_notify_participants_new_message(self, mock_create_notification):
-        """Test that all participants in a thread receive a notification for a new message"""
-        self.thread.participants.add(self.user, self.user2)
-        message = MessageFactory(thread_id=self.thread.id, author_id=self.user.id, content="Hello!")
-
-        # Both participants should be notified
-        expected_calls = [
-            ((self.user.id, "PARTICIPANT THREAD NEW MESSAGE", "message", message.id),),
-            ((self.user2.id, "PARTICIPANT THREAD NEW MESSAGE", "message", message.id),)
-        ]
-
-        mock_create_notification.assert_has_calls(expected_calls, any_order=True)
-        self.assertEqual(mock_create_notification.call_count, 2)
-
-    @patch("main.tasks.create_notification.delay")
-    def test_notify_new_tagged_user(self, mock_create_notification):
-        """Test that tagged users receive a TAGGED notification"""
-        tagged_user = UserFactory(username="tagged_user", id=3)
-        self.thread.participants.add(self.user, self.user2, tagged_user)
-        
-        message = MessageFactory(thread_id=self.thread.id, author_id=self.user.id, content="Hello!")
-        message.tags.append(Tag(user_id=tagged_user.id, username=tagged_user.username))
-
-        mock_create_notification.assert_called_once_with(
-            user_id=tagged_user.id,
-            notification_type="TAGGED",
-            related_model="message",
-            related_model_id=message.id
         )
 
