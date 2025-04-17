@@ -8,16 +8,30 @@ services:
   #   volumes:
   #     - ./frontend:/app
   #   command: npm run start
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ${PWD}/docker/nginx:/etc/nginx/conf.d
+      - static_volume:/app/staticfiles
+    depends_on:
+      - backend
+    restart: unless-stopped
   backend:
     container_name: backend
     build:
       dockerfile: ./docker/back.Dockerfile
-    command: python manage.py runserver 0.0.0.0:8000
+    command: python manage.py collectstatic --noinput & gunicorn -b 0.0.0.0:8000 db_project.wsgi:application & daphne -b 0.0.0.0 -p 8001 db_project.asgi:application
     volumes:
       - ${PWD}/db_project:/app
       - ./venv/lib/python3.11/site-packages:/usr/local/lib/python3.11/site-packages # volumize virtual environment for debugging
+      - static_volume:/app/staticfiles
+
     ports:
       - "8000:8000"
+      - "8001:8001"
     depends_on:
       - postgres
       # - elasticsearch
@@ -65,35 +79,5 @@ services:
       - ${PWD}/docker/volumes/mongo:/data/db
     restart: unless-stopped
 
-  # elasticsearch:
-  #   image: elasticsearch:8.16.3
-  #   container_name: elasticsearch
-  #   environment:
-  #     - discovery.type=single-node
-  #     - bootstrap.memory_lock=true
-  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-  #     - ELASTIC_PASSWORD=changeme
-  #   ulimits:
-  #     memlock:
-  #       soft: -1
-  #       hard: -1
-  #   ports:
-  #     - "9200:9200"
-  #     - "9300:9300"
-  #   volumes:
-  #     - ${PWD}/docker/volumes/elasticsearch:/usr/share/elasticsearch/data
-  #   restart: unless-stopped
-  #   healthcheck:
-  #     test:
-  #       [
-  #         "CMD",
-  #         "curl",
-  #         "-f",
-  #         "-u",
-  #         "elastic:changeme",
-  #         "http://localhost:9200/_cluster/health",
-  #       ]
-  #     interval: 15s
-  #     timeout: 30s
-  #     retries: 5
-  #     start_period: 10s
+volumes:
+  static_volume:
