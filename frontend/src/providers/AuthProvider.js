@@ -1,34 +1,10 @@
-import React, { createContext, useEffect, useState } from "react";
+import React, { createContext } from "react";
+import useMe from "../hooks/useMe";
 import axios from "axios";
-
 export const AuthContext = createContext();
 
 const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get("http://localhost/api/v1/user/me/", {
-          withCredentials: true,
-        });
-        console.log(response.data);
-        setUser(response.data);
-        setError(null);
-      } catch (err) {
-        if (err.response?.status !== 401) {
-          setError(err.response?.data?.detail || err.message);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
+  const { user, loading, error } = useMe();
 
   const getCsrfToken = () => {
     const cookieValue = document.cookie
@@ -44,7 +20,6 @@ const AuthProvider = ({ children }) => {
 
   const handleLogout = async () => {
     try {
-      setLoading(true);
       const csrfToken = getCsrfToken();
       await axios.post(
         "http://localhost/api/v1/user/logout/",
@@ -57,12 +32,9 @@ const AuthProvider = ({ children }) => {
           withCredentials: true,
         }
       );
-      setUser(null);
-      setError(null);
+      window.location.reload();
     } catch (err) {
-      setError(err.response?.data?.detail || err.message);
-    } finally {
-      setLoading(false);
+      console.error(err);
     }
   };
 
