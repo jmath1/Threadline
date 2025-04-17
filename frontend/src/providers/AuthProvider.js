@@ -1,18 +1,14 @@
-import React, { createContext } from "react";
+// context/AuthProvider.js
+import React, { createContext, useEffect, useState } from "react";
 import useMe from "../hooks/useMe";
-import axios from "axios";
+import useLogout from "../hooks/useLogout";
+
 export const AuthContext = createContext();
 
 const AuthProvider = ({ children }) => {
   const { user, loading, error } = useMe();
-
-  const getCsrfToken = () => {
-    const cookieValue = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("csrftoken="))
-      ?.split("=")[1];
-    return cookieValue ? decodeURIComponent(cookieValue) : null;
-  };
+  const { logout, loading: logoutLoading, error: logoutError } = useLogout();
+  const [loggedOut, setLoggedOut] = useState(false);
 
   const handleLoginWithGoogle = () => {
     window.location.href = "http://localhost/auth/login/google-oauth2/";
@@ -20,23 +16,18 @@ const AuthProvider = ({ children }) => {
 
   const handleLogout = async () => {
     try {
-      const csrfToken = getCsrfToken();
-      await axios.post(
-        "http://localhost/api/v1/user/logout/",
-        {},
-        {
-          headers: {
-            "X-CSRFToken": csrfToken,
-            "Content-Type": "application/json",
-          },
-          withCredentials: true,
-        }
-      );
-      window.location.reload();
+      logout();
+      setLoggedOut(true);
     } catch (err) {
-      console.error(err);
+      console.error("Logout failed:", err);
     }
   };
+
+  useEffect(() => {
+    if (loggedOut) {
+      window.location.reload(); // or redirect to login
+    }
+  }, [loggedOut]);
 
   return (
     <AuthContext.Provider
@@ -46,6 +37,8 @@ const AuthProvider = ({ children }) => {
         error,
         handleLoginWithGoogle,
         handleLogout,
+        logoutLoading,
+        logoutError,
       }}
     >
       {children}
