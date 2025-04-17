@@ -8,13 +8,6 @@ urlpatterns = [
     # # follow/unfollow
     path("<int:thread_id>/follow/", api.FollowThread.as_view()),
     path("<int:thread_id>/unfollow/", api.UnfollowThread.as_view()),
-
-
-    # # # feeds for newest
-    # # path("hood/newest/", api.GetNewHoodThreads.as_view()),
-    # # path("user/newest/", api.GetNewUserThreads.as_view()),
-    
-    # # # general, not newest
-    # path("user/", api.GetUserThreads.as_view()),
-    # path("hood/", api.GetHoodThreads.as_view()),
+    path("recently-created/", api.GetRecentlyCreatedThreads.as_view()),
+    path("new-messages/", api.GetThreadsWithNewMessages.as_view()),
 ]

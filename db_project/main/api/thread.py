@@ -95,3 +95,35 @@ class UnfollowThread(GenericAPIView):
             return Response({"detail": "You are not following this thread."}, status=status.HTTP_400_BAD_REQUEST)
         thread.followers.remove(request.user)
         return Response({"detail": "Thread unfollowed successfully."}, status=status.HTTP_200_OK)
+
+
+class GetRecentlyCreatedThreads(ListAPIView):
+    serializer_class = ThreadSerializer
+
+    @swagger_auto_schema(
+        operation_description="Get recently created threads",
+        responses={200: ThreadSerializer(many=True)},
+    )
+    def get_queryset(self):
+        return Thread.objects.filter(
+            Q(type="PUBLIC") | \
+                Q(hood=self.request.user.hood) | \
+                    Q(participants=self.request.user)) \
+                        .order_by("-created_at")
+                        
+class GetThreadsWithNewMessages(ListAPIView):
+    serializer_class = ThreadSerializer
+
+    @swagger_auto_schema(
+        operation_description="Get threads with new messages",
+        responses={200: ThreadSerializer(many=True)},
+    )
+    def get_queryset(self):
+        threads = Thread.objects.filter(
+            Q(type="PUBLIC") | 
+            Q(hood=self.request.user.hood) | 
+            Q(participants=self.request.user)
+        )
+        threads_with_newest_messages = lambda t: Message.objects.filter(thread_id=t.id).order_by('-created_at').first().created_at
+        threads = sorted(threads, key=threads_with_newest_messages, reverse=True)
+        return threads
