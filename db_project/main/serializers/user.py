@@ -11,7 +11,9 @@ from rest_framework_gis.serializers import GeoFeatureModelSerializer
 
 class PointField(serializers.Field):
     def to_representation(self, value):
-        return value.coords
+        if value:
+            return value.coords
+        return None
 
     def to_internal_value(self, data, **kwargs):
         
@@ -22,17 +24,16 @@ class UserSerializer(GeoFeatureModelSerializer):
     first_name = serializers.RegexField(regex=r'^[a-zA-Z0-9]*$', max_length=50)
     last_name = serializers.RegexField(regex=r'^[a-zA-Z0-9]*$', max_length=50)
     email = serializers.CharField(max_length=25)
-    description = serializers.CharField(max_length=255)
     photo_url = serializers.CharField(max_length=255, required=False, allow_null=True)
     address = serializers.CharField(max_length=255)   
-    coords = PointField(required=False)
+    coords = PointField(required=False, allow_null=True, default=None)
     password = serializers.CharField(max_length=30, write_only=True)
     
     class Meta:
         model = User
         geo_field = "coords"
         fields = [
-            "username", "first_name", "last_name", "email", "password", "hood", "description", "photo_url", "address", "coords"
+            "username", "first_name", "last_name", "email", "password", "hood", "photo_url", "address", "coords"
         ]
 
 class MeSerializer(serializers.Serializer):
@@ -40,7 +41,6 @@ class MeSerializer(serializers.Serializer):
     first_name = serializers.RegexField(regex=r'^[a-zA-Z0-9]*$', max_length=50)
     last_name = serializers.RegexField(regex=r'^[a-zA-Z0-9]*$', max_length=50)
     email = serializers.CharField(max_length=25)
-    description = serializers.CharField(max_length=255)
     photo_url = serializers.CharField(max_length=255, required=False, allow_null=True)
     address = serializers.CharField(max_length=255)   
     coords = PointField(required=False)
@@ -59,13 +59,12 @@ class EditUserSerializer(serializers.ModelSerializer):
     first_name = serializers.RegexField(regex=r'^[a-zA-Z0-9]*$', max_length=50, required=False)
     last_name = serializers.RegexField(regex=r'^[a-zA-Z0-9]*$', max_length=50,required=False)
     email = serializers.CharField(max_length=25,required=False)
-    description = serializers.CharField(required=False)
     photo_url = serializers.CharField(max_length=255, required=False, allow_null=True)
     address = serializers.CharField(max_length=200, required=False)
     
     class Meta:
         model = User
-        fields = ["username", "password", "first_name", "last_name", "email", "description", "photo_url", "address"]
+        fields = ["username", "password", "first_name", "last_name", "email", "photo_url", "address"]
         
     def validate_address(self, value):
         hood, coords = process_coords(value)

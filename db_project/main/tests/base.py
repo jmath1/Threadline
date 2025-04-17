@@ -81,7 +81,6 @@ class BaseTestCase(APITestCase):
         email="testuser@gmail.com", 
         first_name="Jonathan", 
         last_name="Math", 
-        description="required", 
         address="Next St, New York"
         ):
         
@@ -91,7 +90,6 @@ class BaseTestCase(APITestCase):
             'email': email,
             'first_name': first_name,
             'last_name': last_name,
-            'description': description,
             'address': address,
         }
         res = self.post('/api/v1/user/register/', data=data)

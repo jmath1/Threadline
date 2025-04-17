@@ -23,7 +23,6 @@ class UserFactory(factory.django.DjangoModelFactory):
     last_name = factory.Faker("last_name")
     email = factory.Faker("email")
     password = factory.PostGenerationMethodCall("set_password", "password")
-    description = factory.Faker("text")
     photo_url = factory.Faker("image_url")
     coords = factory.LazyFunction(lambda: Point(-75.1764407, 39.9404423, srid=4326))
     address = factory.Faker("address")
