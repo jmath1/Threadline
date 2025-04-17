@@ -1,14 +1,28 @@
-import useApi from "./useApi";
+import { useState } from "react";
+import axiosInstance from "../utils/axiosInstance";
 
 const useEditUser = () => {
-  const { makeRequest, data, loading, error } = useApi();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const editUserAddress = (newAddress) => {
-    console.log("Editing user address:", newAddress);
-    makeRequest("/user/edit/", "POST", { address: newAddress });
+  const editUserAddress = async (address) => {
+    setLoading(true);
+    try {
+      const response = await axiosInstance.post(
+        "/user/edit/",
+        { address },
+        { withCredentials: true }
+      );
+      return response.data; // Return updated user data
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return { editUserAddress, data, loading, error };
+  return { editUserAddress, loading, error };
 };
 
 export default useEditUser;
