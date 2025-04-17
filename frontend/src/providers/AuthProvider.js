@@ -1,4 +1,3 @@
-// context/AuthProvider.js
 import React, { createContext, useEffect, useState } from "react";
 import useMe from "../hooks/useMe";
 import useLogout from "../hooks/useLogout";

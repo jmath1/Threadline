@@ -19,7 +19,7 @@ const NavbarDropdownButton = ({ user, handleLogout }) => {
       id="basic-nav-dropdown"
       align="end"
     >
-      <NavDropdown.Item href="/profile">Edit Profile</NavDropdown.Item>
+      <NavDropdown.Item href="/profile">Profile</NavDropdown.Item>
       <NavDropdown.Divider />
       <NavDropdown.Item onClick={handleLogout}>Logout</NavDropdown.Item>
     </NavDropdown>

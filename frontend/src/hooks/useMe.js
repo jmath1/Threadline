@@ -1,4 +1,3 @@
-// hooks/useMe.js
 import { useState, useEffect } from "react";
 import axiosInstance from "../utils/axiosInstance";
 
