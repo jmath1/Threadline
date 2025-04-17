@@ -15,7 +15,6 @@ from django.utils.functional import cached_property
 from main.constants import (FRIEND_REQUEST_STATUS_CHOICES,
                             NOTIFICATION_STATUSES, NOTIFICATION_TYPES,
                             THREAD_TYPES)
-from main.tasks import create_notification
 from main.utils.utils import decode_external_id, encode_internal_id
 from mongoengine import (DateTimeField, Document, EmbeddedDocument,
                          EmbeddedDocumentField, IntField, ListField,

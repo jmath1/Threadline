@@ -3,7 +3,7 @@ from django.conf import settings
 import redis
 import uuid
 import json
-import Notification from main.models
+from main.models import Notification 
 
 redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=settings.REDIS_DB)
 
