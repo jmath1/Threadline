@@ -4,13 +4,10 @@ import os
 
 from celery import Celery
 
-# Set default Django settings module for 'celery'
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'your_project_name.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'db_project.settings')
 
-app = Celery('your_project_name')
+app = Celery('db_project')
 
-# Load task modules from all registered Django app configs.
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
-# Autodiscover tasks
 app.autodiscover_tasks()

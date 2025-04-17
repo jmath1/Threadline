@@ -349,3 +349,20 @@ class UserAccess(models.Model):
     
     def __str__(self):
         return f"User {self.user.username} accessed thread {self.thread.name}"
+
+class Notification(Document):
+    internal_id = StringField(required=True, default=lambda: str(uuid.uuid4()))
+    user_id = IntField(required=True)
+    type = StringField(choices=NOTIFICATION_TYPES, required=True)
+    related_model = StringField(choices=["thread", "message"], required=True)
+    related_model_id = IntField(required=True)
+    status = StringField(choices=NOTIFICATION_STATUSES, default="UNREAD")
+    created_at = DateTimeField(default=datetime.utcnow)
+
+    meta = {
+        'collection': 'notifications',
+        'indexes': ['user_id', 'type', 'related_model', 'related_model_id'],
+    }
+    
+    def __str__(self):
+        return f"Notification {self.id} for user {self.user_id}"
