@@ -14,9 +14,30 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
+
+class LogoutView(GenericAPIView):
+    """
+    Endpoint to log out the user.
+    """
+    permission_classes = [AllowAny]
+    
+    @swagger_auto_schema(
+        operation_description="Logout the user",
+        responses={200: "User logged out successfully"},
+    )
+    def post(self, request):
+        """
+        Log out the user
+        """
+        try:
+            request.session.flush()
+            return Response({"message": "User logged out successfully"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 class GetUserDetail(RetrieveAPIView):
     serializer_class = UserSerializer
     queryset = User.objects.all()
+    permission_classes = [AllowAny]
     
     def get_object(self):
         return self.get_queryset().get(user_id=self.kwargs["pk"]).annotate("followers_count", "following_count", "friends_count")
@@ -56,7 +77,6 @@ class UserRegisterView(CreateAPIView):
                 first_name=validated_data['first_name'],
                 last_name=validated_data['last_name'],
                 email=validated_data['email'],
-                description=validated_data['description'],
                 photo_url=validated_data.get('photo_url', None),
                 address=validated_data['address'],
                 coords=coords,
