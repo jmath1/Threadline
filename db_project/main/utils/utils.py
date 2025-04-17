@@ -25,29 +25,31 @@ def decode_external_id(hashed_id):
         return ObjectId(hex(decoded_values[0])[2:])  # Convert back to ObjectId
     return None
 
-def geocode_address(self, address: str) -> Point:
+def geocode_address(address: str) -> Point:
     """
     Gets the latitude and longitude of an address. Returns None if the address is invalid
     """
-
-    api_key = os.getenv("GOOGLE_API_KEY")
-    endpoint = "https://maps.googleapis.com/maps/api/geocode/json"
+    endpoint = "https://nominatim.openstreetmap.org/search"
     params = {
-        "address": address,
-        "key": api_key
+        "q": address + " Philadelphia, PA",
+        "format": "json",
+        "addressdetails": 1,
+        "limit": 1
     }
-
-    response = requests.get(endpoint, params=params)
+    headers = {
+        "User-Agent": "YourAppName/1.0 (your.email@example.com)"  # Replace with your app details
+    }
+    response = requests.get(endpoint, params=params, headers=headers)
 
     if response.status_code == 200:
-        if response.json().get("error_message"):
-            return None
-        else:
-            latitude = response.json()['results'][0]['geometry']['bounds']['northeast']['lat']
-            longitude = response.json()['results'][0]['geometry']['bounds']['northeast']['lng']
-            self.coords = (longitude, latitude)
+        
+        results = response.json()
+        if results:
+            latitude = float(results[0]['lat'])
+            longitude = float(results[0]['lon'])
             point = Point(longitude, latitude, srid=4326)
             return point
+    return None
         
 def process_coords(address: str):
     from main.models import Hood

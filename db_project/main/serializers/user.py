@@ -48,6 +48,11 @@ class MeSerializer(serializers.Serializer):
     followers_count = serializers.IntegerField()
     following_count = serializers.IntegerField()
     friends_count = serializers.IntegerField()
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["neighborhood"] = instance.hood.name,
+        return data
         
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=50)
