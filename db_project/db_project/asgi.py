@@ -14,7 +14,7 @@ from channels.layers import get_channel_layer
 from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
 from django.urls import re_path
-from main.consumers import NotificationConsumer
+from main.consumers import ChatConsumer, NotificationConsumer
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "db_project.settings")
 
@@ -23,7 +23,8 @@ application = ProtocolTypeRouter({
     "http": get_asgi_application(),  # HTTP request handling (normal Django views)
     "websocket": AuthMiddlewareStack(  # WebSocket connection handling
         URLRouter([
-            re_path(r'ws/notifications/$', NotificationConsumer.as_asgi()),  # WebSocket URL
+            re_path(r'ws/chat/$', ChatConsumer.as_asgi()),  # WebSocket URL
+            re_path(r'ws/notifications/$', NotificationConsumer.as_asgi()),  # WebSocket URL for notifications
         ])
     ),
 })
