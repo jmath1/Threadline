@@ -60,7 +60,7 @@ class LoginSerializer(serializers.Serializer):
     
 class EditUserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(max_length=50, required=False)
-    password = serializers.CharField(max_length=30, required=False)
+    password = serializers.CharField(max_length=30, required=False, write_only=True)
     first_name = serializers.RegexField(regex=r'^[a-zA-Z0-9]*$', max_length=50, required=False)
     last_name = serializers.RegexField(regex=r'^[a-zA-Z0-9]*$', max_length=50,required=False)
     email = serializers.CharField(max_length=25,required=False)
