@@ -28,6 +28,8 @@ class NotificationListAPIView(ListAPIView):
 class MarkNotificationReadAPIView(GenericAPIView):
     serializer_class = EmptySerializer
 
+    def get_queryset(self):
+        return None
     def get_object(self):
         user_id = self.request.user.id
         notification_id = self.kwargs["notification_id"]
