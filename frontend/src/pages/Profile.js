@@ -12,7 +12,6 @@ const Profile = () => {
   const { user, refetch } = useContext(AuthContext);
   const [localUser, setLocalUser] = useState(user);
 
-  // Sync localUser with the user from AuthContext
   useEffect(() => {
     setLocalUser(user);
   }, [user]);
@@ -37,7 +36,7 @@ const Profile = () => {
         onSubmit={(e) => {
           e.preventDefault();
           const address = e.target.elements.address.value;
-          handleUserEdit(address); // Trigger user edit
+          handleUserEdit(address);
         }}
       >
         <Form.Group controlId="formAddress">
@@ -46,13 +45,13 @@ const Profile = () => {
             type="text"
             name="address"
             placeholder="Enter your address"
-            defaultValue={localUser.address} // Pre-fill with current address
+            defaultValue={localUser.address}
           />
         </Form.Group>
         <button
           type="submit"
           className="btn btn-primary"
-          disabled={editLoading} // Disable button while loading
+          disabled={editLoading}
         >
           {editLoading ? "Submitting..." : "Submit"}
         </button>
