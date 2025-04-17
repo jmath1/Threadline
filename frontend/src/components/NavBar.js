@@ -10,6 +10,13 @@ const NavBar = () => {
     <Navbar bg="light" expand="lg" className="mb-4">
       <Container>
         <Navbar.Brand href="/">Threadline</Navbar.Brand>
+        <Navbar.Toggle aria-controls="basic-navbar-nav" />
+
+        <Nav className="me-auto">
+          <Nav.Link href="/chat">Chat</Nav.Link>
+          <Nav.Link href="/hoods">Hoods</Nav.Link>
+          <Nav.Link href="/new">New</Nav.Link>
+        </Nav>
         <Navbar.Collapse id="basic-navbar-nav" className="justify-content-end">
           <Nav>
             {loading ? (

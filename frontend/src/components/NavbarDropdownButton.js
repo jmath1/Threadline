@@ -7,7 +7,7 @@ const NavbarDropdownButton = ({ user, handleLogout }) => {
       title={
         <>
           <Image
-            src={user.profile_picture_url} // Provide a default profile image
+            src={user.photo_url} // Provide a default profile image
             roundedCircle
             width="30"
             height="30"

@@ -1,24 +1,22 @@
 import "./App.css";
 import Layout from "./components/Layout";
-import AuthProvider from "./providers/AuthProvider";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { Routes, Route, BrowserRouter as Router } from "react-router-dom";
+import Chat from "./pages/Chat";
+import Hoods from "./pages/Hoods";
+import New from "./pages/New";
+
 function App() {
   return (
-    <AuthProvider>
+    <Router>
       <Layout>
-        <header className="App-header">
-          <p>Starting my Threadline App here</p>
-          <a
-            className="App-link"
-            href="https://jonathanmath.com"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            jonathanmath.com
-          </a>
-        </header>
+        <Routes>
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/hoods" element={<Hoods />} />
+          <Route path="/new" element={<New />} />
+        </Routes>
       </Layout>
-    </AuthProvider>
+    </Router>
   );
 }
 
