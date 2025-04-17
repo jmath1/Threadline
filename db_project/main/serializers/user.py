@@ -51,7 +51,7 @@ class MeSerializer(serializers.Serializer):
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data["neighborhood"] = instance.hood.name,
+        data["neighborhood"] = instance.hood.name if instance.hood else None
         return data
         
 class LoginSerializer(serializers.Serializer):

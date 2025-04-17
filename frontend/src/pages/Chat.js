@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
+
+import { AuthContext } from "../providers/AuthProvider";
 
 const Chat = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [error, setError] = useState(null);
   const [socket, setSocket] = useState(null);
+  const { user } = useContext(AuthContext);
 
   useEffect(() => {
     // Connect to the WebSocket
@@ -58,7 +61,7 @@ const Chat = () => {
 
   return (
     <div>
-      <h1>Chat</h1>
+      <h1>Chat: {user.neighborhood}</h1>
       <div
         style={{
           border: "1px solid #ccc",
@@ -68,8 +71,19 @@ const Chat = () => {
         }}
       >
         {messages.map((msg, index) => (
-          <div key={index} style={{ marginBottom: "10px" }}>
-            <span style={{ color: "red", fontWeight: "bold" }}>
+          <div
+            key={index}
+            style={{
+              marginBottom: "10px",
+              textAlign: msg.user === user.email ? "right" : "left",
+            }}
+          >
+            <span
+              style={{
+                color: msg.user === user.email ? "blue" : "red",
+                fontWeight: "bold",
+              }}
+            >
               {msg.user}:
             </span>{" "}
             <span>{msg.message}</span>
