@@ -2,7 +2,7 @@ from django.contrib.gis.geos import Point
 from main.factories import FriendshipFactory, ThreadFactory, UserFactory
 from main.models import Hood, Thread
 from main.tests.base import BaseTestCase
-
+from main.factories import MessageFactory
 
 class GetThreadTest(BaseTestCase):
     
@@ -146,3 +146,62 @@ class DeleteThreadTest(BaseTestCase):
         self.assertEqual(res.status_code, 404)
         self.assertEqual(Thread.objects.count(), 0)
         
+class GetRecentlyCreatedThreadsTest(BaseTestCase):
+    
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.hood = Hood.objects.get(id=1)
+        cls.user.hood = cls.hood
+        cls.user.save()
+        cls.mock_geocode_address.return_value = Point(-75.1764407, 39.9404423, srid=4326)
+        cls.other_hood = Hood.objects.get(id=2)
+        
+    def setUp(self):
+        self.login_user(self.user)
+        
+    def test_get_recently_created_threads(self):
+        public_thread = ThreadFactory(name="Public", hood=self.hood, type="PUBLIC")
+        hood_thread = ThreadFactory(name="Hood", hood=self.hood, type="HOOD")
+        participant_thread = ThreadFactory(name="Participant", hood=self.other_hood, type="PRIVATE")
+        participant_thread.participants.add(self.user)
+        
+        response = self.get("/api/v1/thread/recently-created/", auth=True)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 3)
+        self.assertEqual(response.json()[0]["name"], "Participant")
+        self.assertEqual(response.json()[1]["name"], "Hood")
+        self.assertEqual(response.json()[2]["name"], "Public")
+
+class GetThreadsWithNewMessagesTest(BaseTestCase):
+    
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.hood = Hood.objects.get(id=1)
+        cls.user.hood = cls.hood
+        cls.user.save()
+        cls.mock_geocode_address.return_value = Point(-75.1764407, 39.9404423, srid=4326)
+        cls.other_hood = Hood.objects.get(id=2)
+        
+    def setUp(self):
+        self.login_user(self.user)
+        
+    def test_get_threads_with_new_messages(self):
+        public_thread = ThreadFactory(name="Public", hood=self.hood, type="PUBLIC")
+        hood_thread = ThreadFactory(name="Hood", hood=self.hood, type="PUBLIC")
+        participant_thread = ThreadFactory(name="Participant", hood=self.other_hood, type="PRIVATE")
+        participant_thread.participants.add(self.user)
+        
+        MessageFactory(thread_id=public_thread.id, author_id=self.user.id, content="Public message")
+        MessageFactory(thread_id=hood_thread.id, author_id=self.user.id, content="Hood message")
+        MessageFactory(thread_id=participant_thread.id, author_id=self.user.id, content="Participant message")
+        
+        response = self.get("/api/v1/thread/new-messages/", auth=True)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 3)
+        self.assertEqual(response.json()[0]["name"], "Participant")
+        self.assertEqual(response.json()[1]["name"], "Hood")
+        self.assertEqual(response.json()[2]["name"], "Public")
