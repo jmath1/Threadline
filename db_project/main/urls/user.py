@@ -7,5 +7,5 @@ urlpatterns = [
     path("me/", api.MeGET.as_view()),
     #path("login/", api.UserLogin.as_view()),
     path("edit/", api.EditUserView.as_view()),
-        
+    path("new-members/", api.NewlyJoinedMembers.as_view()),
 ]

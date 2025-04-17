@@ -8,7 +8,7 @@ from main.serializers.user import (EditUserSerializer, MeSerializer,
 from main.utils.utils import process_coords
 from rest_framework import status
 from rest_framework.generics import (CreateAPIView, GenericAPIView,
-                                     RetrieveAPIView)
+                                     RetrieveAPIView, ListAPIView)
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -114,3 +114,12 @@ class EditUserView(GenericAPIView):
         serializer.update(user, serializer.validated_data)
         return Response(serializer.data)
 
+class NewlyJoinedMembers(ListAPIView):
+    serializer_class = UserSerializer
+
+    @swagger_auto_schema(
+        operation_description="Get newly joined members",
+        responses={200: UserSerializer(many=True)},
+    )
+    def get_queryset(self):
+        return User.objects.filter(is_active=True).order_by("-date_joined")
