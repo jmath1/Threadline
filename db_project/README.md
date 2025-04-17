@@ -47,9 +47,9 @@ Copy the `.env.template` file to `.env` and fill in the `GOOGLE_API_KEY` to get 
 
 4. **Information Display and Updates**
 
-   - [ ] Develop main feed page showing recent threads.
-   - [ ] Implement options to view threads with new messages.
-   - [ ] Display profiles of newly joined members.
+   - [x] Develop main feed page showing recent threads.
+   - [x] Implement options to view threads with new messages.
+   - [x] Display profiles of newly joined members.
 
 5. **Notifications**
 
@@ -58,6 +58,7 @@ Copy the `.env.template` file to `.env` and fill in the `GOOGLE_API_KEY` to get 
    - [x] Create notification signals for a new follower.
    - [x] Create notifications for a new message in a thread that the user is a participant.
    - [x] Create notifications for a new tag in a message.
+   - [ ] Notifications should be stored in Mongo and also have a pubsub channel in redis for new notifications while the user is logged in.
 
 6. **Navigation and Search Functions**
 
