@@ -267,7 +267,7 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'https://www.googleapis.com/auth/userinfo.profile',
 ]
 SOCIAL_AUTH_URL_NAMESPACE = 'social'
-SOCIAL_AUTH_LOGIN_REDIRECT_URL = 'http://localhost:3000/home'
+SOCIAL_AUTH_LOGIN_REDIRECT_URL = 'http://localhost:3000/'
 LOGOUT_REDIRECT_URL = 'http://localhost:3000/'
 LOGIN_URL = '/auth/login/google-oauth2/'
 LOGOUT_URL = '/logout/'

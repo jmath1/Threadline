@@ -23,8 +23,8 @@ application = ProtocolTypeRouter({
     "http": get_asgi_application(),  # HTTP request handling (normal Django views)
     "websocket": AuthMiddlewareStack(  # WebSocket connection handling
         URLRouter([
-            re_path(r'ws/chat/$', ChatConsumer.as_asgi()),  # WebSocket URL
-            re_path(r'ws/notifications/$', NotificationConsumer.as_asgi()),  # WebSocket URL for notifications
+            re_path(r'ws/chat/$', ChatConsumer.as_asgi()),  # Remove trailing slash
+            #re_path(r'ws/notifications/$', NotificationConsumer.as_asgi()),  # WebSocket URL for notifications
         ])
     ),
 })
