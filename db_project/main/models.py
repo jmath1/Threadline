@@ -7,7 +7,7 @@ from datetime import datetime
 
 import redis
 from django.conf import settings
-from django.contrib.auth.models import (AbstractBaseUser, PermissionsMixin,
+from django.contrib.auth.models import (AbstractUser, PermissionsMixin,
                                         UserManager)
 from django.contrib.gis.db import models as gis_models
 from django.db import models
@@ -43,17 +43,11 @@ class Hood(models.Model):
     def members(self):
         return self.user_set.all()
 
-class User(AbstractBaseUser, PermissionsMixin):
-    username = models.CharField(max_length=50, unique=True)
-    first_name = models.CharField(max_length=50)
-    last_name = models.CharField(max_length=50)
-    email = models.EmailField(unique=True)
-    password = models.CharField(max_length=100)
-    description = models.TextField()
+class User(AbstractUser, PermissionsMixin):
     photo_url = models.CharField(max_length=255, null=True)
-    coords = gis_models.PointField(geography=True, srid=4326)
-    location_confirmed = models.BooleanField(default=False)
-    address = models.CharField(max_length=255)
+    coords = gis_models.PointField(geography=True, srid=4326, null=True)
+    location_confirmed = models.BooleanField(default=False, null=True)
+    address = models.CharField(max_length=255, null=True)
     hood = models.ForeignKey(Hood, on_delete=models.SET_NULL, null=True)
     hood_follow = models.ManyToManyField(Hood, through='UserFollowHood', related_name='hood_follow')
     friends = models.ManyToManyField('self', through='Friendship', symmetrical=True)
