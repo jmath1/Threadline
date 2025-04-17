@@ -61,7 +61,7 @@ const Chat = () => {
 
   return (
     <div>
-      <h1>Chat: {user.neighborhood}</h1>
+      <h1>Chat: {user?.neighborhood}</h1>
       <div
         style={{
           border: "1px solid #ccc",
