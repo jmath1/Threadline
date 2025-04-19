@@ -1,11 +1,55 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import useListHoods from "../hooks/useListHoods";
+import { Table, Form } from "react-bootstrap";
 
-const Hoods = () => {
+function Hoods() {
+  const hoodsPromise = useListHoods();
+  const [hoods, setHoods] = useState([]);
+
+  useEffect(() => {
+    hoodsPromise.then((data) => setHoods(data));
+  }, [hoodsPromise]);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  if (!hoods || hoods.length === 0) {
+    return <div>No data available.</div>;
+  }
+
+  const filteredHoods = hoods.filter((hood) =>
+    hood.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div>
       <h1>Hoods</h1>
-      <p>This is the hoods page. See what is going on in other hoods here</p>
+      <Form.Group className="mb-3" controlId="search">
+        <Form.Control
+          type="text"
+          placeholder="Search by name"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </Form.Group>
+      <div style={{ maxHeight: "500px", overflowY: "auto" }}>
+        <Table striped bordered hover size="sm" responsive>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Members</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredHoods.map((hood) => (
+              <tr key={hood.id}>
+                <td>{hood.name}</td>
+                <td>{hood.member_count}</td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </div>
     </div>
   );
-};
+}
+
 export default Hoods;

@@ -1,14 +1,45 @@
-// hooks/useLogout.js
-import useApi from "./useApi";
+import { useState } from "react";
+import axios from "axios";
+
+// Utility to get CSRF token from cookies
+const getCsrfToken = () => {
+  const name = "csrftoken";
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(";").shift();
+  return null;
+};
 
 const useLogout = () => {
-  const { makeRequest, data, loading, error } = useApi();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const logout = () => {
-    makeRequest("/user/logout/", "POST");
+  const logout = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const csrfToken = getCsrfToken();
+      await axios.post(
+        "http://localhost/api/v1/user/logout/",
+        {},
+        {
+          withCredentials: true,
+          headers: {
+            "X-CSRFToken": csrfToken || "",
+          },
+        }
+      );
+      return { error: null };
+    } catch (err) {
+      console.error("Logout error:", err);
+      setError(err);
+      return { error: err };
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return { logout, data, loading, error };
+  return { logout, loading, error };
 };
 
 export default useLogout;

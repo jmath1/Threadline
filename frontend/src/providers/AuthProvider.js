@@ -5,12 +5,11 @@ import useLogout from "../hooks/useLogout";
 export const AuthContext = createContext();
 
 const AuthProvider = ({ children }) => {
-  const { user: fetchedUser, loading, error, refetch } = useMe(); // Get refetch from useMe
+  const { user: fetchedUser, loading, error, refetch } = useMe(); // Use the useMe hook
   const { logout, loading: logoutLoading, error: logoutError } = useLogout();
-  const [user, setUser] = useState(fetchedUser); // Manage user state locally
-  const [loggedOut, setLoggedOut] = useState(false);
+  const [user, setUser] = useState(null); // Local user state
 
-  // Sync fetchedUser from useMe to local user state
+  // Sync local user state with fetched user data
   useEffect(() => {
     setUser(fetchedUser);
   }, [fetchedUser]);
@@ -21,11 +20,15 @@ const AuthProvider = ({ children }) => {
 
   const handleLogout = async () => {
     try {
-      logout();
-      setLoggedOut(true);
-      setUser(null);
+      const { error } = await logout();
+      if (error) {
+        console.error("Logout failed:", error);
+        return;
+      }
+      setUser(null); // Clear user state
+      await refetch(); // Refetch to confirm logout (should return null user)
     } catch (err) {
-      console.error("Logout failed:", err);
+      console.error("Unexpected error during logout:", err);
     }
   };
 
@@ -33,24 +36,18 @@ const AuthProvider = ({ children }) => {
     setUser(updatedUser);
   };
 
-  useEffect(() => {
-    if (loggedOut) {
-      window.location.reload();
-    }
-  }, [loggedOut]);
-
   return (
     <AuthContext.Provider
       value={{
         user,
-        loading,
-        error,
         handleLoginWithGoogle,
         handleLogout,
         logoutLoading,
         logoutError,
-        updateUser, // Expose updateUser function
-        refetch, // Expose refetch for manual re-fetching if needed
+        loading, // Expose loading state from useMe
+        error, // Expose error state from useMe
+        updateUser,
+        refetch,
       }}
     >
       {children}
