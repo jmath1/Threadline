@@ -4,6 +4,7 @@ from main.api import thread as api
 urlpatterns = [    
     path("<int:pk>/", api.RetrieveDestroyThread.as_view()),
     path("", api.CreateThread.as_view()),
+    path("hood/<int:hood_id>/", api.GetHoodThreads.as_view()),
     
     # # follow/unfollow
     path("<int:thread_id>/follow/", api.FollowThread.as_view()),
