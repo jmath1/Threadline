@@ -66,7 +66,7 @@ class ThreadSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Thread
-        fields = ["name", "type", "hood", "participants", "author", "created_at", "messages"]
+        fields = ["name", "type", "hood", "participants", "author", "created_at", "messages", "id"]
         read_only_fields = ["created_at", "messages"]
 
 class CreateThreadSerializer(serializers.Serializer):
