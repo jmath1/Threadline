@@ -6,7 +6,22 @@ from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK
 
-
+class ListHoods(ListAPIView):
+    """
+    Endpoint to list all hoods.
+    """
+    serializer_class = HoodSerializer
+    queryset = Hood.objects.all()
+    
+    @swagger_auto_schema(
+        operation_description="Get all hoods",
+        responses={200: HoodSerializer},
+    )
+    def get(self, request):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=HTTP_200_OK)
+    
 class GetUserHoodsFollowed(ListAPIView):
     serializer_class = HoodSerializer
     
