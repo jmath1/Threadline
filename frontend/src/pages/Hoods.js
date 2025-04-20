@@ -1,16 +1,22 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import useListHoods from "../hooks/useListHoods";
 import { Table, Form } from "react-bootstrap";
 
 function Hoods() {
-  const hoodsPromise = useListHoods();
-  const [hoods, setHoods] = useState([]);
-
-  useEffect(() => {
-    hoodsPromise.then((data) => setHoods(data));
-  }, [hoodsPromise]);
-
+  const { hoods, loading, error } = useListHoods();
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Handle loading state
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  // Handle error state
+  if (error) {
+    return <div>Error: {error.message}</div>;
+  }
+
+  // Handle empty data state
   if (!hoods || hoods.length === 0) {
     return <div>No data available.</div>;
   }

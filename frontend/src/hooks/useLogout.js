@@ -29,6 +29,8 @@ const useLogout = () => {
           },
         }
       );
+      // Clear user data from local storage
+      localStorage.removeItem("user");
       return { error: null };
     } catch (err) {
       console.error("Logout error:", err);

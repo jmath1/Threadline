@@ -1,5 +1,12 @@
 import React, { useContext } from "react";
-import { Navbar, Nav, Container, Button, Spinner } from "react-bootstrap";
+import {
+  Navbar,
+  NavDropdown,
+  Nav,
+  Container,
+  Button,
+  Spinner,
+} from "react-bootstrap";
 import { AuthContext } from "../providers/AuthProvider";
 import NavbarDropdownButton from "./NavbarDropdownButton";
 const NavBar = () => {
@@ -15,7 +22,10 @@ const NavBar = () => {
         <Nav className="me-auto">
           <Nav.Link href="/chat">Chat</Nav.Link>
           <Nav.Link href="/hoods">Hoods</Nav.Link>
-          <Nav.Link href="/new">New</Nav.Link>
+          <NavDropdown title="Threads" id="threads-dropdown">
+            <NavDropdown.Item href="/threads/my-hood">My Hood</NavDropdown.Item>
+            <NavDropdown.Item href="/threads/all">All</NavDropdown.Item>
+          </NavDropdown>
         </Nav>
         <Navbar.Collapse id="basic-navbar-nav" className="justify-content-end">
           <Nav>

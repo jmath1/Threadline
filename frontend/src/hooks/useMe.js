@@ -1,37 +1,43 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
-import { useEffect } from "react";
 
 const useMe = () => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchUser = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await axios.get("http://localhost/api/v1/user/me/", {
-        withCredentials: true,
-      });
-      setUser(response.data);
-      return response.data;
-    } catch (err) {
-      console.error("Error fetching user data:", err);
-      setError(err);
-      setUser(null);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Fetch user data on mount
   useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
+    const fetchUser = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Check local storage first
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+          setLoading(false);
+          return;
+        }
 
-  return { user, loading, error, refetch: fetchUser };
+        // Fetch from API if not in local storage
+        const response = await axios.get("http://localhost/api/v1/user/me/", {
+          withCredentials: true,
+        });
+        setUser(response.data);
+        localStorage.setItem("user", JSON.stringify(response.data));
+      } catch (err) {
+        console.error("Error fetching user data:", err);
+        setError(err);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, []); // Empty dependency array to run only once on mount
+
+  return { user, loading, error };
 };
 
 export default useMe;
