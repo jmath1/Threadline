@@ -19,7 +19,7 @@ class PointField(serializers.Field):
         
         return Point(data[0], data[1], geography=True, srid=4326)
 
-class UserSerializer(GeoFeatureModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(max_length=50)
     first_name = serializers.RegexField(regex=r'^[a-zA-Z0-9]*$', max_length=50)
     last_name = serializers.RegexField(regex=r'^[a-zA-Z0-9]*$', max_length=50)
