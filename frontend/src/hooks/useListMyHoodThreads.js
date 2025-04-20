@@ -5,6 +5,11 @@ const useListMyHoodThreads = (neighborhoodId) => {
   const [threads, setThreads] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refetch = () => {
+    setRefreshKey((prev) => prev + 1);
+  };
 
   useEffect(() => {
     if (!neighborhoodId) return;
@@ -29,9 +34,9 @@ const useListMyHoodThreads = (neighborhoodId) => {
     };
 
     fetchThreads();
-  }, [neighborhoodId]);
+  }, [neighborhoodId, refreshKey]);
 
-  return { threads, loading, error };
+  return { threads, loading, error, refetch };
 };
 
 export default useListMyHoodThreads;

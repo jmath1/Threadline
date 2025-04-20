@@ -54,6 +54,35 @@ class MessageSerializer(serializers.Serializer):
         return instance
     
 
+class NewThreadSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+    type = serializers.CharField(max_length=10)
+    hood = serializers.PrimaryKeyRelatedField(queryset=Hood.objects.all(), required=False)
+    participants = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.all())
+    content = serializers.CharField(max_length=500)
+
+    class Meta:
+        fields = ["name", "type", "hood", "participants", "content"]
+    def save(self, **kwargs):
+        thread = Thread.objects.create(
+            name=self.validated_data["name"],
+            type=self.validated_data["type"],
+            hood=self.validated_data.get("hood"),
+            author=self.context["request"].user
+        )
+
+        try:
+            message = Message.objects.create(
+                thread_id=thread.id,
+                author_id=self.context["request"].user.id,
+                content=self.validated_data["content"]
+            )
+
+            return thread
+        except Exception as e:
+            # Log or handle the exception as needed
+            thread.delete()
+            raise serializers.ValidationError(f"Failed to create thread: {e}")
 
 class ThreadSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length=255)
@@ -68,6 +97,16 @@ class ThreadSerializer(serializers.ModelSerializer):
         model = Thread
         fields = ["name", "type", "hood", "participants", "author", "created_at", "messages", "id"]
         read_only_fields = ["created_at", "messages"]
+        
+    def create(self, validated_data):
+        # Create the thread in PostgreSQL
+        thread = Thread.objects.create(
+            name=validated_data["name"],
+            type=validated_data["type"],
+            hood=validated_data["hood"],
+            author=self.context["request"].user
+        )
+        return thread
 
 class CreateThreadSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)

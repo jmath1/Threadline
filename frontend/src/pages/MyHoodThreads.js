@@ -1,23 +1,21 @@
 import React, { useState } from "react";
 import useListMyHoodThreads from "../hooks/useListMyHoodThreads";
 import useMe from "../hooks/useMe";
-import { Modal, Form, Accordion, Button } from "react-bootstrap";
+import { Form, Accordion, Button } from "react-bootstrap";
 import { Link } from "react-router-dom";
+import ThreadModal from "../components/ThreadModal";
+import axios from "axios";
 
-function MyHoodThreads() {
+const MyHoodThreads = () => {
   const { user, loading: userLoading, error: userError } = useMe();
-  const [showModal, setShowModal] = useState(false);
-  const [newThreadName, setNewThreadName] = useState("");
-  const [newMessageName, setNewMessageName] = useState("");
-  console.log("user", user);
   const {
     threads,
     loading: threadsLoading,
     error: threadsError,
+    refetch: refetchThreads,
   } = useListMyHoodThreads(user?.hood);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Handle loading and error states
   if (userLoading || threadsLoading) {
     return <div>Loading...</div>;
   }
@@ -33,12 +31,40 @@ function MyHoodThreads() {
   const filteredThreads = threads.filter((thread) =>
     thread.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  const getCsrfToken = () => {
+    const name = "csrftoken";
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(";").shift();
+    return null;
+  };
+  const handleCreateHoodThread = async (threadName, messageContent) => {
+    try {
+      const response = await axios.post(
+        "http://localhost/api/v1/thread/",
+        {
+          hood: user?.hood,
+          name: threadName,
+          content: messageContent,
+          type: "HOOD",
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCsrfToken(),
+          },
+          withCredentials: true,
+        }
+      );
 
-  const handleCreateThread = () => {
-    // Add logic to create a new thread here
-    console.log("Creating thread:", newThreadName);
-    setShowModal(false);
-    setNewThreadName("");
+      const newThread = response.data;
+      console.log("Thread created:", newThread);
+      refetchThreads(); // Refresh the threads list
+      return { success: true, thread: newThread };
+    } catch (error) {
+      console.error("Error creating thread:", error);
+      return { success: false, error: error.message };
+    }
   };
 
   return (
@@ -51,9 +77,7 @@ function MyHoodThreads() {
         }}
       >
         <h1>Threads: {user.neighborhood}</h1>
-        <Button variant="success" onClick={() => setShowModal(true)}>
-          +
-        </Button>
+        <ThreadModal handleCreateThread={handleCreateHoodThread} />
       </div>
       <Form.Group className="mb-3" controlId="search">
         <Form.Control
@@ -78,18 +102,16 @@ function MyHoodThreads() {
                 </p>
                 <p>
                   <strong>Last Message:</strong>{" "}
-                  {new Date(
-                    thread.messages?.[thread.messages.length - 1]?.created_at
-                  ).toLocaleString()}
+                  {thread.messages?.length > 0
+                    ? new Date(
+                        thread.messages[thread.messages.length - 1].created_at
+                      ).toLocaleString()
+                    : "No messages"}
                 </p>
                 <p>
                   <strong>Message Count:</strong> {thread.messages?.length || 0}
                 </p>
-                <Button
-                  as={Link}
-                  to={`/threads/${thread.id}`}
-                  variant="primary"
-                >
+                <Button as={Link} to={`/thread/${thread.id}`} variant="primary">
                   View
                 </Button>
               </Accordion.Body>
@@ -97,44 +119,8 @@ function MyHoodThreads() {
           ))}
         </Accordion>
       </div>
-
-      {/* Modal for creating a new thread */}
-      <Modal show={showModal} onHide={() => setShowModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Create New Thread</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form>
-            <Form.Group className="mb-3" controlId="newThreadName">
-              <Form.Label>Thread Name</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="Enter thread name"
-                value={newThreadName}
-                onChange={(e) => setNewThreadName(e.target.value)}
-              />
-              <Form.Label>Message</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={4}
-                placeholder="Enter Message"
-                value={newMessageName}
-                onChange={(e) => setNewMessageName(e.target.value)}
-              />
-            </Form.Group>
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={handleCreateThread}>
-            Create
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </div>
   );
-}
+};
 
 export default MyHoodThreads;

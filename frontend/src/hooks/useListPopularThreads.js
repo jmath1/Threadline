@@ -11,12 +11,9 @@ const useListPopularThreads = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await axios.get(
-          "http://localhost/api/v1/threads/popular/",
-          {
-            withCredentials: true,
-          }
-        );
+        const res = await axios.get("http://localhost/api/v1/thread/popular/", {
+          withCredentials: true,
+        });
         setPopularThreads(res.data);
       } catch (err) {
         console.error("Error fetching popular threads:", err);

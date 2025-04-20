@@ -4,7 +4,7 @@ from drf_yasg.utils import swagger_auto_schema
 from main.models import Message, Thread
 from main.permissions import ThreadPermission
 from main.serializers.general import EmptySerializer
-from main.serializers.thread import CreateThreadSerializer, ThreadSerializer
+from main.serializers.thread import CreateThreadSerializer, ThreadSerializer, NewThreadSerializer
 from rest_framework import status
 from rest_framework.generics import (CreateAPIView, DestroyAPIView,
                                      GenericAPIView, ListAPIView,
@@ -52,13 +52,13 @@ class CreateThread(CreateAPIView):
     
     @swagger_auto_schema(
         operation_description="Create a thread",
-        responses={201: ThreadSerializer},
+        responses={201: NewThreadSerializer},
     )
     def post(self, request):
         """
         Create a thread, create message, associate message and partipants
         """
-        data = request.data.dict()
+        data = request.data
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         thread = serializer.save()
