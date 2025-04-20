@@ -12,6 +12,7 @@ from rest_framework.generics import (CreateAPIView, GenericAPIView,
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth import logout
 
 
 
@@ -30,7 +31,7 @@ class LogoutView(GenericAPIView):
         Log out the user
         """
         try:
-            request.session.flush()
+            logout(request)
             return Response({"message": "User logged out successfully"}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
